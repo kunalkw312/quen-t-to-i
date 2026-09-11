@@ -3,35 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixabay Educational Diagrams</title>
+    <title>Puter.js Educational Visuals</title>
     <style>
         :root {
-            --bg-color: #f0f2f5;
-            --container-bg: #ffffff;
-            --text-color: #1c1e21;
-            --primary-color: #00a859; 
-            --primary-hover: #008f4c;
-            --border-color: #ccd0d5;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --border: #cbd5e1;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             display: flex;
             justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            margin: 0;
             padding: 40px 20px;
-            box-sizing: border-box;
+            margin: 0;
         }
 
         .container {
-            background-color: var(--container-bg);
+            background: var(--surface);
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
             max-width: 650px;
             width: 100%;
         }
@@ -42,173 +39,181 @@
             font-size: 1.5rem;
         }
 
-        .form-group {
+        .subtitle {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
             margin-bottom: 20px;
         }
 
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            font-size: 0.9rem;
+        .quick-select {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
         }
 
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-color);
+        .quick-btn {
+            padding: 8px 10px;
+            background: #f1f5f9;
+            border: 1px solid var(--border);
             border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #334155;
+        }
+
+        .quick-btn:hover {
+            background: #e2e8f0;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             font-size: 1rem;
-            box-sizing: border-box;
+            outline: none;
         }
 
         input:focus {
-            outline: none;
-            border-color: var(--primary-color);
+            border-color: var(--primary);
         }
 
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary-color);
+        button.search-action {
+            padding: 12px 20px;
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 6px;
-            font-size: 1rem;
+            border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
-            margin-top: 10px;
         }
 
-        button:hover {
-            background-color: var(--primary-hover);
+        button.search-action:hover {
+            background: var(--primary-hover);
         }
 
-        .result-area {
-            margin-top: 25px;
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 20px;
             text-align: center;
-            min-height: 250px;
+            min-height: 350px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            border: 2px dashed var(--border-color);
+            justify-content: center;
+            border: 2px dashed var(--border);
             border-radius: 8px;
-            padding: 20px;
-            background-color: #fafbfc;
+            background: #ffffff;
+            padding: 15px;
         }
 
-        .result-area img {
+        .result img {
             max-width: 100%;
-            max-height: 500px;
+            max-height: 450px;
             border-radius: 6px;
-            display: none; 
-            background-color: white;
+            background: white;
         }
 
-        .status-text {
-            color: #606770;
+        .diagram-title {
+            margin-top: 12px;
+            font-weight: 600;
+.          color: #334155;
+        }
+
+        .status {
+            color: #64748b;
             font-size: 0.95rem;
         }
-
-        .error {
-            color: #fa383e;
-            font-weight: bold;
-        }
     </style>
+
+    <!-- Load Puter.js SDK via CDN -->
+    <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
 
     <div class="container">
-        <h1>Vector Diagram Search</h1>
-        
-        <div class="form-group">
-            <label for="apiKey">Pixabay API Key (Free)</label>
-            <input type="password" id="apiKey" placeholder="e.g. 12345678-abcdef..." required>
-        </div>
+        <h1>Puter.js Visual Generator</h1>
+        <div class="subtitle">Zero API keys required. Uses Puter's user-auth cloud architecture.</div>
 
-        <div class="form-group">
-            <label for="searchInput">Educational Subject</label>
-            <input type="text" id="searchInput" placeholder="e.g., Plant cell diagram, Heart anatomy..." required>
+        <!-- Guaranteed Accurate Presets -->
+        <div class="quick-select">
+            <button class="quick-btn" onclick="loadPreset('Human Heart Anatomy', 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Heart_diagram-en.svg/800px-Heart_diagram-en.svg.png')">Human Heart</button>
+            <button class="quick-btn" onclick="loadPreset('Plant Cell Structure', 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Plant_cell_structure-en.svg/800px-Plant_cell_structure-en.svg.png')">Plant Cell</button>
+            <button class="quick-btn" onclick="loadPreset('Mature Flower Diagram', 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Mature_flower_diagram-en.svg/800px-Mature_flower_diagram-en.svg.png')">Hibiscus / Flower</button>
+            <button class="quick-btn" onclick="loadPreset('Water Cycle Schematic', 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Water_cycle_blank.svg/800px-Water_cycle_blank.svg.png')">Water Cycle</button>
+            <button class="quick-btn" onclick="loadPreset('Human Brain Anatomy', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Brain_human_normal_inferior_view_with_labels_en.svg/800px-Brain_human_normal_inferior_view_with_labels_en.svg.png')">Human Brain</button>
+            <button class="quick-btn" onclick="loadPreset('Neuron Structure', 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Neuron_Hand-made.svg/800px-Neuron_Hand-made.svg.png')">Neuron</button>
         </div>
         
-        <button id="searchBtn">Search Diagram</button>
-
-        <div class="result-area" id="resultArea">
-            <div id="statusText" class="status-text">Your vector diagram will appear here</div>
-            <img id="resultImage" alt="Diagram">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Or type custom prompt for AI generation...">
+            <button class="search-action" id="searchBtn">Generate AI</button>
+        </div>
+        
+        <div class="result" id="resultArea">
+            <div id="status" class="status">Select a verified preset or type a prompt to generate via Puter AI.</div>
         </div>
     </div>
 
     <script>
-        const searchBtn = document.getElementById('searchBtn');
-        const apiKeyInput = document.getElementById('apiKey');
-        const searchInput = document.getElementById('searchInput');
-        const statusText = document.getElementById('statusText');
-        const resultImage = document.getElementById('resultImage');
+        const input = document.getElementById('searchInput');
+        const btn = document.getElementById('searchBtn');
+        const resultArea = document.getElementById('resultArea');
 
-        // JSONP Callback function
-        window.handlePixabayResponse = function(data) {
-            // Clean up the script tag
-            const oldScript = document.getElementById('pixabayJSONP');
-            if (oldScript) oldScript.remove();
-            
-            searchBtn.disabled = false;
-
-            if (parseInt(data.totalHits) > 0) {
-                // Get the best match image URL
-                const imgUrl = data.hits[0].webformatURL;
-                
-                resultImage.src = imgUrl;
-                statusText.style.display = 'none';
-                resultImage.style.display = 'block';
-            } else {
-                showError("No vector diagrams found for that subject.");
-            }
-        };
-
-        searchBtn.addEventListener('click', () => {
-            const apiKey = apiKeyInput.value.trim();
-            const query = searchInput.value.trim();
-            
-            if (!apiKey || !query) {
-                showError("Please enter both an API key and a search term.");
-                return;
-            }
-
-            // Reset UI
-            searchBtn.disabled = true;
-            statusText.textContent = "Searching vectors... (No fetch used)";
-            statusText.className = "status-text";
-            statusText.style.display = 'block';
-            resultImage.style.display = 'none';
-
-            // Clean up old script tags if the user is searching multiple times
-            const oldScript = document.getElementById('pixabayJSONP');
-            if (oldScript) oldScript.remove();
-
-            // Construct query: force vector graphics and English
-            const encodedQuery = encodeURIComponent(`${query} diagram english`);
-            
-            // Build the JSONP script URL
-            const script = document.createElement('script');
-            script.id = 'pixabayJSONP';
-            // Use image_type=vector to avoid getting photos, callback bypasses CORS
-            script.src = `https://pixabay.com/api/?key=${apiKey}&q=${encodedQuery}&image_type=vector&per_page=3&callback=handlePixabayResponse`;
-
-            // Inject script to bypass file:/// protocol limits
-            document.body.appendChild(script);
-        });
-
-        function showError(message) {
-            statusText.textContent = message;
-            statusText.className = "status-text error";
-            statusText.style.display = 'block';
-            resultImage.style.display = 'none';
+        function loadPreset(name, url) {
+            resultArea.innerHTML = `
+                <img src="${url}" alt="${name}">
+                <div class="diagram-title">${name} (Verified Textbook Diagram)</div>
+            `;
         }
 
-        searchInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') searchBtn.click();
+        btn.addEventListener('click', async () => {
+            const query = input.value.trim();
+            if (!query) return;
+
+            resultArea.innerHTML = `<div class="status">Generating via Puter AI... Please wait.</div>`;
+            btn.disabled = true;
+
+            try {
+                // Enforce strict educational vector phrasing to prevent artistic hallucinations
+                const engineeredPrompt = `A clean, highly accurate educational textbook diagram of ${query}, minimal vector illustration style, solid white background, correctly spelled English labels with indicator lines.`;
+
+                // Call Puter.js text-to-image API (defaults or using FLUX/Stable Diffusion models via Puter)
+                const imageElement = await puter.ai.txt2img(engineeredPrompt);
+
+                resultArea.innerHTML = '';
+                resultArea.appendChild(imageElement);
+                
+                const label = document.createElement('div');
+                label.className = 'diagram-title';
+                label.textContent = `Generated for: "${query}"`;
+                resultArea.appendChild(label);
+
+            } catch (error) {
+                console.error(error);
+                resultArea.innerHTML = `<div class="status" style="color: #dc2626;">Error: Make sure you are signed into your Puter account when prompted.</div>`;
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') btn.click();
         });
     </script>
 </body>
