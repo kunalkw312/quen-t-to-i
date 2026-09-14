@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>In-App Diagram Generator</title>
+    <title>Nano Banana Pro Diagram Engine</title>
+    <script src="https://js.puter.com/v2/"></script>
     <style>
         :root {
             --bg: #f8fafc;
             --surface: #ffffff;
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
+            --primary: #f59e0b;
+            --primary-hover: #d97706;
             --text: #0f172a;
-            --border: #e2e8f0;
+            --border: #cbd5e1;
         }
 
         body {
@@ -20,155 +21,150 @@
             color: var(--text);
             display: flex;
             justify-content: center;
-            padding: 20px;
+            padding: 40px 20px;
             margin: 0;
-            box-sizing: border-box;
         }
 
-        .widget-container {
+        .container {
             background: var(--surface);
-            padding: 24px;
+            padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            max-width: 900px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 650px;
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
         }
 
-        h2 {
-            margin: 0;
-            font-size: 1.4rem;
-            color: #1e293b;
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            font-size: 1.5rem;
         }
 
-        .description {
-            font-size: 0.9rem;
+        .subtitle {
+            text-align: center;
+            font-size: 0.85rem;
             color: #64748b;
-            margin-top: -10px;
+            margin-bottom: 20px;
         }
 
-        .control-panel {
+        .search-box {
             display: flex;
             gap: 10px;
+            margin-bottom: 20px;
         }
 
         input {
             flex-grow: 1;
-            padding: 12px 16px;
-            border: 2px solid var(--border);
+            padding: 12px;
+            border: 1px solid var(--border);
             border-radius: 8px;
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.2s;
         }
 
         input:focus {
             border-color: var(--primary);
         }
 
-        button {
-            padding: 12px 24px;
+        button.search-action {
+            padding: 12px 20px;
             background: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s;
-            white-space: nowrap;
         }
 
-        button:hover {
+        button.search-action:hover {
             background: var(--primary-hover);
         }
 
-        .alert-banner {
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 20px;
             text-align: center;
-            color: #059669;
-            font-weight: 500;
-            font-size: 0.95rem;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 15px;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 450px;
+            border-radius: 6px;
             display: none;
-            padding: 12px;
-            background: #d1fae5;
-            border-radius: 8px;
-            border: 1px solid #10b981;
+            background: white;
         }
 
-        .iframe-wrapper {
-            width: 100%;
-            height: 600px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-            background: #f1f5f9;
-        }
-
-        /* The src points to the unblocked null.perchance.org subdomain */
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        @media (max-width: 600px) {
-            .control-panel {
-                flex-direction: column;
-            }
-            button {
-                width: 100%;
-            }
+        .status {
+            color: #64748b;
+            font-size: 0.95rem;
         }
     </style>
 </head>
 <body>
 
-    <div class="widget-container">
-        <h2>In-App Diagram Engine</h2>
-        <div class="description">Strict educational prompt generation natively embedded.</div>
-
-        <div class="control-panel">
-            <input type="text" id="topicInput" placeholder="Enter topic (e.g., Cellular Respiration)...">
-            <button id="copyBtn">1. Prepare Prompt</button>
+    <div class="container">
+        <h1>Nano Banana Pro Engine</h1>
+        <div class="subtitle">Direct, keyless integration via Puter.js.</div>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search science topic (e.g., Photosynthesis)...">
+            <button class="search-action" id="searchBtn">Generate Diagram</button>
         </div>
-
-        <div id="alertBanner" class="alert-banner">
-            ✅ Strict educational prompt copied! Paste it into the embedded generator below.
-        </div>
-
-        <div class="iframe-wrapper">
-            <!-- Using the null subdomain bypasses the X-Frame-Options connection refusal -->
-            <iframe src="https://null.perchance.org/ai-text-to-image-generator" allow="fullscreen"></iframe>
+        
+        <div class="result">
+            <div id="status" class="status">Type an educational keyword.</div>
+            <img id="image" alt="Educational Diagram">
         </div>
     </div>
 
     <script>
-        const input = document.getElementById('topicInput');
-        const btn = document.getElementById('copyBtn');
-        const alertBanner = document.getElementById('alertBanner');
+        const input = document.getElementById('searchInput');
+        const btn = document.getElementById('searchBtn');
+        const status = document.getElementById('status');
+        const img = document.getElementById('image');
 
         btn.addEventListener('click', async () => {
             const topic = input.value.trim();
             if (!topic) return;
 
+            // Strict textbook styling prompt
             const engineeredPrompt = `highly accurate educational scientific textbook diagram of ${topic}, clean white background, vector graphic schematic style, clear English text labels with pointing arrows, no background clutter, academic, instructional`;
 
+            status.style.display = 'block';
+            status.textContent = 'Authenticating and generating...';
+            img.style.display = 'none';
+            btn.disabled = true;
+
             try {
-                await navigator.clipboard.writeText(engineeredPrompt);
+                // Fetch the image using the specific Nano Banana Pro model identifier
+                const returnedImgElement = await puter.ai.txt2img(engineeredPrompt, { 
+                    model: "gemini-3-pro-image-preview" 
+                });
                 
-                alertBanner.style.display = 'block';
-                btn.textContent = 'Copied!';
-                btn.style.background = '#10b981';
+                // Extract the src from the returned HTMLImageElement to preserve our custom UI styling
+                img.src = returnedImgElement.src;
                 
-                setTimeout(() => {
-                    alertBanner.style.display = 'none';
-                    btn.textContent = '1. Prepare Prompt';
-                    btn.style.background = 'var(--primary)';
-                }, 5000);
+                img.onload = () => {
+                    status.style.display = 'none';
+                    img.style.display = 'block';
+                    btn.disabled = false;
+                };
             } catch (err) {
-                // Failsafe for strict browser isolation
-                prompt("Please copy your strict educational prompt below:", engineeredPrompt);
+                status.textContent = 'Error: ' + err.message;
+                btn.disabled = false;
             }
         });
 
