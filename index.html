@@ -67,20 +67,19 @@
 
                 const data = await response.json();
 
-                // 2. Turn the Cloudinary data into our book layout
+                // 2. Turn the Cloudinary data into our book layout using backward counting
                 booksDatabase = data.resources.map(file => {
-                    // file.public_id looks like: "NCERT BOOKS/Class 5/Arts/eebu101"
                     const folderParts = file.public_id.split('/');
                     
                     let classLevel = "Unknown";
                     let subject = "Unknown";
                     let fileName = file.public_id;
 
-                    // If it matches your PC folder structure
-                    if (folderParts.length >= 4) {
-                        classLevel = folderParts[1]; // e.g., "Class 5"
-                        subject = folderParts[2];    // e.g., "Arts"
-                        fileName = folderParts[folderParts.length - 1]; // e.g., "eebu101"
+                    // Count backward from the file name to reliably grab the subject and class
+                    if (folderParts.length >= 3) {
+                        fileName = folderParts[folderParts.length - 1];   // e.g., "eebu101"
+                        subject = folderParts[folderParts.length - 2];    // e.g., "Arts"
+                        classLevel = folderParts[folderParts.length - 3]; // e.g., "Class 5"
                     }
 
                     return {
