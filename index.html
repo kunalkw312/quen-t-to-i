@@ -366,13 +366,6 @@
       color: var(--bg-surface-hover);
     }
 
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: #000;
-    }
-
     .hidden {
       display: none !important;
     }
@@ -459,7 +452,7 @@
         <h2>Ready to Explore</h2>
         <p>Select a 3D model, simulation, video, or e-book from the panel to project it onto the SmartBoard.</p>
       </div>
-      <iframe id="phetIframe" class="hidden" allow="fullscreen; autoplay; xr-spatial-tracking" allowfullscreen></iframe>
+      <!-- Viewers (iframe or object) will be injected dynamically here to prevent bugs -->
     </div>
   </div>
 
@@ -544,7 +537,7 @@
           ]
         }
       }
-      // Dynamic Cloudinary Root Folders (like NCERT BOOKS) will automatically inject here
+      // Cloudinary Root Folders (e.g., NCERT BOOKS) will be dynamically added here
     };
 
     let currentMode = '3d'; // Default active tab is '3d'
@@ -757,16 +750,16 @@
                 currentLevel._files = [];
             }
 
+            // 5. Properly URL-Encode the folder paths to prevent Google bugs
+            const encodedPublicId = file.public_id.split('/').map(encodeURIComponent).join('/');
             let format = file.format || 'pdf';
-            let rawPdfUrl = `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${file.public_id}.${format}`;
             
-            // 5. WRAP IN GOOGLE DOCS VIEWER: This completely bypasses Cloudinary's "Open" button 
-            // and forces the PDF to render fully inline inside the iframe.
-            let pdfViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawPdfUrl)}&embedded=true`;
+            // 6. Use the direct Cloudinary URL (The viewer logic below handles rendering)
+            let directPdfUrl = `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${encodedPublicId}.${format}`;
 
             currentLevel._files.push({
                 name: fileName, 
-                url: pdfViewerUrl,
+                url: directPdfUrl,
                 external: false
             });
         });
@@ -835,7 +828,7 @@
     }
 
     function loadSketchfabModel(name, uid) {
-      const iframe = document.getElementById("phetIframe");
+      const boardArea = document.getElementById("boardArea");
       const placeholder = document.getElementById("whiteboardPlaceholder");
       const titleSpan = document.getElementById("active-sim-title");
       const titleText = document.getElementById("title-text");
@@ -843,7 +836,22 @@
       const fullscreenBtn = document.getElementById("fullscreenBtn");
 
       placeholder.classList.add("hidden");
-      iframe.classList.remove("hidden");
+      
+      // Ensure the viewer is an iframe (required by Sketchfab API)
+      let viewerEl = document.getElementById("activeViewer");
+      if (!viewerEl || viewerEl.tagName !== "IFRAME") {
+        if (viewerEl) viewerEl.remove();
+        viewerEl = document.createElement("iframe");
+        viewerEl.id = "activeViewer";
+        viewerEl.style.width = "100%";
+        viewerEl.style.height = "100%";
+        viewerEl.style.border = "none";
+        viewerEl.style.backgroundColor = "#000";
+        viewerEl.allow = "fullscreen; autoplay; xr-spatial-tracking";
+        boardArea.appendChild(viewerEl);
+      } else {
+        viewerEl.src = "about:blank"; // Clear previous before initializing
+      }
       
       titleSpan.querySelector('.material-symbols-outlined').innerText = 'view_in_ar';
       titleSpan.querySelector('.material-symbols-outlined').style.color = 'var(--primary)';
@@ -854,7 +862,7 @@
 
       // Initialize Sketchfab Viewer API
       viewerAPI = null;
-      const client = new Sketchfab('1.12.1', iframe);
+      const client = new Sketchfab('1.12.1', viewerEl);
       client.init(uid, {
         autostart: 1,
         ui_theme: 'dark',
@@ -872,31 +880,61 @@
     function pauseAnimation() { if (viewerAPI) viewerAPI.pause(); }
 
     // -----------------------------------------
-    // General Functions
+    // Dynamic Viewer Injection System
     // -----------------------------------------
-    function toggleSidebar() {
-      document.getElementById("sidePanel").classList.toggle("closed");
-    }
-
     function loadSimulation(name, url, external = false) {
       if (external) {
         window.open(url, '_blank');
         return;
       }
 
-      // Hide Sketchfab controls if switching away from 3D models
+      // Hide Sketchfab controls
       document.getElementById("sketchfabControls").style.display = "none";
       document.getElementById("fullscreenBtn").classList.remove("hidden");
       viewerAPI = null;
 
-      const iframe = document.getElementById("phetIframe");
+      const boardArea = document.getElementById("boardArea");
       const placeholder = document.getElementById("whiteboardPlaceholder");
       const titleSpan = document.getElementById("active-sim-title");
       const titleText = document.getElementById("title-text");
 
-      iframe.src = url;
-      iframe.classList.remove("hidden");
       placeholder.classList.add("hidden");
+
+      // Clear whatever was previously open
+      const existingViewer = document.getElementById("activeViewer");
+      if (existingViewer) existingViewer.remove();
+      
+      let viewerEl;
+
+      // Smart Viewer Selection: Object for PDFs, Iframe for everything else
+      if (url.toLowerCase().includes('.pdf')) {
+        // Using <object> forces the browser's native PDF plugin and completely prevents
+        // Cloudinary's "Open PDF" HTML page from showing up.
+        viewerEl = document.createElement("object");
+        viewerEl.data = url + "#toolbar=0&navpanes=0&view=FitH"; 
+        viewerEl.type = "application/pdf";
+        
+        // Fallback message for devices that refuse inline rendering (like some mobile phones)
+        viewerEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-muted);">
+            <span class="material-symbols-outlined" style="font-size: 4rem; color:var(--primary); margin-bottom: 16px;">picture_as_pdf</span>
+            <p style="margin-bottom: 24px; font-size:1.1rem;">Your browser prefers to open this PDF natively.</p>
+            <a href="${url}" target="_blank" class="btn primary" style="text-decoration:none;">Open Document</a>
+          </div>
+        `;
+      } else {
+        viewerEl = document.createElement("iframe");
+        viewerEl.src = url;
+        viewerEl.allow = "fullscreen; autoplay; xr-spatial-tracking";
+      }
+
+      viewerEl.id = "activeViewer";
+      viewerEl.style.width = "100%";
+      viewerEl.style.height = "100%";
+      viewerEl.style.border = "none";
+      viewerEl.style.backgroundColor = "#000";
+
+      boardArea.appendChild(viewerEl);
       
       let icon = "science";
       if(currentMode === "videos") icon = "smart_display";
