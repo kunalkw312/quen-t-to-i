@@ -379,11 +379,6 @@
     .hidden {
       display: none !important;
     }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
   </style>
 </head>
 <body>
@@ -476,10 +471,6 @@
             { name: "Buoyancy", url: "https://phet.colorado.edu/sims/html/buoyancy/latest/buoyancy_en.html" },
             { name: "Projectile Data Lab", url: "https://phet.colorado.edu/sims/html/projectile-data-lab/latest/projectile-data-lab_en.html" },
             { name: "Kepler's Laws", url: "https://phet.colorado.edu/sims/html/keplers-laws/latest/keplers-laws_en.html" }
-          ],
-          "Sound & Waves": [
-            { name: "Sound Waves", url: "https://phet.colorado.edu/sims/html/sound-waves/latest/sound-waves_en.html" },
-            { name: "Fourier: Making Waves", url: "https://phet.colorado.edu/sims/html/fourier-making-waves/latest/fourier-making-waves_en.html" }
           ]
         }
       },
@@ -489,6 +480,24 @@
           "General Biology": [
             { name: "Membrane Transport", url: "https://phet.colorado.edu/sims/html/membrane-transport/latest/membrane-transport_en.html" },
             { name: "Density", url: "https://phet.colorado.edu/sims/html/density/latest/density_en.html" }
+          ]
+        }
+      },
+      chemistry: {
+        title: "Chemistry",
+        chapters: {
+          "General Chemistry": [
+            { name: "Membrane Transport", url: "https://phet.colorado.edu/sims/html/membrane-transport/latest/membrane-transport_en.html" },
+            { name: "Models of the Hydrogen Atom", url: "https://phet.colorado.edu/sims/html/models-of-the-hydrogen-atom/latest/models-of-the-hydrogen-atom_en.html" }
+          ]
+        }
+      },
+      math: {
+        title: "Math & Statistics",
+        chapters: {
+          "Math Concepts": [
+            { name: "Number Pairs", url: "https://phet.colorado.edu/sims/html/number-pairs/latest/number-pairs_en.html" },
+            { name: "Mean: Share and Balance", url: "https://phet.colorado.edu/sims/html/mean-share-and-balance/latest/mean-share-and-balance_en.html" }
           ]
         }
       }
@@ -519,82 +528,24 @@
     };
 
     // -----------------------------------------
-    // 3. Dynamic Cloudinary E-Books Logic
+    // 3. e-Book Library Data (Dynamic + Static)
     // -----------------------------------------
-    const cloudName = 'jkhyxfzz';
-    const tagName = 'books'; 
-    const listUrl = `https://res.cloudinary.com/${cloudName}/image/list/${tagName}.json`;
-
-    let customEbooksData = {};
-    let isEbooksLoaded = false;
-    let isLoadingEbooks = false;
-
-    async function fetchCloudinaryEbooks() {
-      if (isEbooksLoaded) return;
-      isLoadingEbooks = true;
-      try {
-        // Cache-busting URL to ensure fresh library loads
-        const response = await fetch(listUrl + "?v=" + new Date().getTime());
-        
-        if (!response.ok) {
-          throw new Error("Could not fetch books from Cloudinary.");
+    const eBooksData = {
+      maharashtra: {
+        title: "Maharashtra State Board",
+        chapters: {
+          "Classes 1 to 12": [
+            { name: "Balbharati Books ↗", url: "https://books.ebalbharati.in/ebook.aspx", external: true }
+          ]
         }
-
-        const data = await response.json();
-        customEbooksData = {};
-
-        data.resources.forEach(file => {
-          const folderParts = file.public_id.split('/');
-          
-          let classLevel = "Uncategorized";
-          let subject = "General";
-          let fileName = file.public_id;
-
-          // Parse Folder Logic: Class -> Subject -> Filename
-          if (folderParts.length >= 3) {
-            fileName = folderParts[folderParts.length - 1];
-            subject = folderParts[folderParts.length - 2];
-            classLevel = folderParts[folderParts.length - 3];
-          }
-
-          const classKey = classLevel.toLowerCase().replace(/\s+/g, '-');
-
-          // Initialize Class if it doesn't exist
-          if (!customEbooksData[classKey]) {
-            customEbooksData[classKey] = {
-              title: classLevel,
-              chapters: {}
-            };
-          }
-
-          // Initialize Subject if it doesn't exist
-          if (!customEbooksData[classKey].chapters[subject]) {
-            customEbooksData[classKey].chapters[subject] = [];
-          }
-
-          // Add the PDF file to the Subject folder
-          customEbooksData[classKey].chapters[subject].push({
-            name: fileName,
-            url: `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${file.public_id}.${file.format}`,
-            external: false // Loads in the SmartBoard iframe instead of a new tab
-          });
-        });
-
-        isEbooksLoaded = true;
-      } catch (error) {
-        console.error('E-Book Load Error:', error);
-      } finally {
-        isLoadingEbooks = false;
       }
-    }
+      // Cloudinary books will be injected here automatically by fetchBooksFromCloudinary()
+    };
 
-    // -----------------------------------------
-    // Mode Switching & App Logic
-    // -----------------------------------------
-    let currentMode = '3d'; 
-    let viewerAPI = null;   
+    let currentMode = '3d'; // Default active tab is '3d'
+    let viewerAPI = null;   // Sketchfab Viewer API instance
 
-    async function switchMode(mode) {
+    function switchMode(mode) {
       currentMode = mode;
 
       // Update UI Tabs
@@ -605,44 +556,35 @@
 
       const searchInput = document.getElementById('searchInput');
       const searchBtn = document.getElementById('searchBtn');
-      const container = document.getElementById("simTree");
 
       searchInput.value = "";
 
       if (mode === '3d') {
         searchInput.placeholder = "Search 3D models (e.g. Heart)...";
         searchBtn.classList.remove('hidden');
+        const container = document.getElementById("simTree");
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 24px; font-size: 0.9rem;">Type a query like <i>Human heart</i>, <i>Brain</i>, or <i>Skeleton</i> and press Search.</p>';
       } else {
         searchInput.placeholder = "Search resources...";
         searchBtn.classList.add('hidden');
-        
-        if (mode === 'ebooks') {
-          if (!isEbooksLoaded) {
-            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;"><span class="material-symbols-outlined" style="animation: spin 2s linear infinite;">autorenew</span><br>Loading E-Books Library...</div>';
-            await fetchCloudinaryEbooks();
-          }
-          if (Object.keys(customEbooksData).length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #f87171; padding: 24px;">No e-books found. Ensure files are uploaded and tagged as "books" in Cloudinary.</p>';
-          } else {
-            renderTree();
-          }
-        } else {
-          renderTree();
-        }
+        renderTree();
       }
     }
 
     function onSearchInput(event) {
       if (currentMode === '3d') {
-        if (event.key === 'Enter') performSketchfabSearch();
+        if (event.key === 'Enter') {
+          performSketchfabSearch();
+        }
       } else {
         filterSimulations();
       }
     }
 
     document.getElementById('searchInput').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && currentMode === '3d') performSketchfabSearch();
+      if (e.key === 'Enter' && currentMode === '3d') {
+        performSketchfabSearch();
+      }
     });
 
     function renderTree() {
@@ -652,7 +594,7 @@
       let activeData;
       if (currentMode === 'phet') activeData = phetData;
       else if (currentMode === 'videos') activeData = videoData;
-      else if (currentMode === 'ebooks') activeData = customEbooksData; // Switch to the dynamically loaded data
+      else if (currentMode === 'ebooks') activeData = eBooksData;
       else return;
 
       for (const [subjKey, subject] of Object.entries(activeData)) {
@@ -667,13 +609,13 @@
         for (const [chapterName, sims] of Object.entries(subject.chapters)) {
           const chapTitle = document.createElement("div");
           chapTitle.className = "chapter-title";
-          chapTitle.innerText = chapterName; // In E-books, this acts as the "Subject"
+          chapTitle.innerText = chapterName;
           subjContent.appendChild(chapTitle);
 
           if (sims.length === 0) {
             const emptyEl = document.createElement("div");
             emptyEl.className = "sim-item";
-            emptyEl.innerText = "Empty Folder";
+            emptyEl.innerText = "Coming Soon...";
             emptyEl.style.cursor = "default";
             emptyEl.style.opacity = "0.6";
             subjContent.appendChild(emptyEl);
@@ -681,7 +623,7 @@
             sims.forEach(sim => {
               const simEl = document.createElement("div");
               simEl.className = "sim-item";
-              simEl.innerText = sim.name; // In E-books, this acts as the PDF Book Name
+              simEl.innerText = sim.name;
               simEl.onclick = () => loadSimulation(sim.name, sim.url, sim.external);
               subjContent.appendChild(simEl);
             });
@@ -700,7 +642,79 @@
     }
 
     // -----------------------------------------
-    // 4. Sketchfab 3D Models Integration
+    // 4. Cloudinary Automated E-Books Fetch
+    // -----------------------------------------
+    async function fetchBooksFromCloudinary() {
+      const cloudName = 'jkhyxfzz';
+      const tagName = 'books'; 
+      const listUrl = `https://res.cloudinary.com/${cloudName}/image/list/${tagName}.json`;
+
+      try {
+        const noCacheUrl = listUrl + "?v=" + new Date().getTime();
+        const response = await fetch(noCacheUrl);
+        
+        if (!response.ok) {
+            console.warn("Cloudinary Books: Could not fetch list. Check if the 'books' tag is enabled on your PDFs.");
+            return;
+        }
+
+        const data = await response.json();
+        const cloudinaryGroups = {};
+
+        // Parse Cloudinary file structures into the SmartBoard UI Tree
+        data.resources.forEach(file => {
+            const folderParts = file.public_id.split('/');
+            
+            let classLevel = "Uncategorized";
+            let subject = "General";
+            let fileName = file.public_id;
+
+            // Backward count logic from previous step: Class X -> Subject -> filename
+            if (folderParts.length >= 3) {
+                fileName = folderParts[folderParts.length - 1];   
+                subject = folderParts[folderParts.length - 2];    
+                classLevel = folderParts[folderParts.length - 3]; 
+            }
+
+            const safeClassId = "cloud_" + classLevel.replace(/\s+/g, '_').toLowerCase();
+
+            if (!cloudinaryGroups[safeClassId]) {
+                cloudinaryGroups[safeClassId] = {
+                    title: classLevel,
+                    chapters: {}
+                };
+            }
+
+            if (!cloudinaryGroups[safeClassId].chapters[subject]) {
+                cloudinaryGroups[safeClassId].chapters[subject] = [];
+            }
+
+            let format = file.format || 'pdf';
+            cloudinaryGroups[safeClassId].chapters[subject].push({
+                name: fileName, 
+                url: `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${file.public_id}.${format}`
+            });
+        });
+
+        // Merge generated Cloudinary classes into the static eBooksData object
+        Object.assign(eBooksData, cloudinaryGroups);
+
+        // If currently viewing the ebooks tab while it loaded, refresh the menu tree
+        if (currentMode === 'ebooks') {
+            renderTree();
+        }
+
+      } catch (error) {
+        console.error('Error fetching Cloudinary Books:', error);
+      }
+    }
+
+    // Execute the Cloudinary fetch immediately on load
+    window.addEventListener('load', fetchBooksFromCloudinary);
+
+
+    // -----------------------------------------
+    // 5. Sketchfab 3D Models Integration
     // -----------------------------------------
     async function performSketchfabSearch() {
       const query = document.getElementById('searchInput').value.trim();
@@ -760,6 +774,7 @@
       titleSpan.innerHTML = `<span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: text-bottom; color: var(--primary);">view_in_ar</span> ${name}`;
       modelControls.classList.remove("hidden");
 
+      // Initialize Sketchfab Viewer API
       viewerAPI = null;
       const client = new Sketchfab('1.12.1', iframe);
       client.init(uid, {
@@ -775,9 +790,17 @@
       });
     }
 
-    function playAnimation() { if (viewerAPI) viewerAPI.play(); }
-    function pauseAnimation() { if (viewerAPI) viewerAPI.pause(); }
+    function playAnimation() {
+      if (viewerAPI) viewerAPI.play();
+    }
 
+    function pauseAnimation() {
+      if (viewerAPI) viewerAPI.pause();
+    }
+
+    // -----------------------------------------
+    // General Functions
+    // -----------------------------------------
     function toggleSidebar() {
       document.getElementById("sidePanel").classList.toggle("closed");
     }
@@ -788,6 +811,7 @@
         return;
       }
 
+      // Hide Sketchfab controls if switching away from 3D models
       document.getElementById("sketchfabControls").classList.add("hidden");
       viewerAPI = null;
 
@@ -820,6 +844,7 @@
       });
     }
 
+    // Initial setup on 3D Models tab
     const initialTree = document.getElementById("simTree");
     initialTree.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 24px; font-size: 0.9rem;">Type a query like <i>Human heart</i>, <i>Brain</i>, or <i>Skeleton</i> and press Search.</p>';
   </script>
