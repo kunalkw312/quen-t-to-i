@@ -115,6 +115,9 @@
       padding: 6px 16px;
       border-radius: 20px;
       border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .model-controls {
@@ -257,15 +260,6 @@
       border-color: var(--border);
     }
 
-    .chapter-title {
-      font-size: 0.75rem;
-      color: var(--primary);
-      margin: 16px 0 8px 16px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 700;
-    }
-
     .sim-item {
       padding: 10px 16px 10px 24px;
       font-size: 0.9rem;
@@ -275,6 +269,9 @@
       transition: all 0.2s;
       position: relative;
       margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .sim-item::before {
@@ -392,19 +389,27 @@
     <button class="btn" onclick="toggleSidebar()" title="Toggle Sidebar">
       <span class="material-symbols-outlined">menu_open</span>
     </button>
-    <span id="active-sim-title" style="color: var(--text-muted); font-size: 0.9rem;">
-      <span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: text-bottom;">info</span>
-      No simulation loaded
+    
+    <span id="active-sim-title">
+      <span class="material-symbols-outlined" style="font-size: 1.2rem;">info</span>
+      <span id="title-text">No resource loaded</span>
     </span>
 
-    <!-- Dynamic Animation Controls for 3D Viewer -->
-    <div id="sketchfabControls" class="model-controls hidden">
-      <button class="btn primary" onclick="playAnimation()">
-        <span class="material-symbols-outlined">play_arrow</span> Play
+    <div class="model-controls">
+      <!-- Fullscreen Button -->
+      <button class="btn hidden" id="fullscreenBtn" onclick="toggleFullScreen()" title="Full Screen">
+        <span class="material-symbols-outlined">fullscreen</span> Full Screen
       </button>
-      <button class="btn" onclick="pauseAnimation()">
-        <span class="material-symbols-outlined">pause</span> Pause
-      </button>
+
+      <!-- Dynamic Animation Controls for 3D Viewer -->
+      <div id="sketchfabControls" class="hidden" style="display:flex; gap:10px;">
+        <button class="btn primary" onclick="playAnimation()">
+          <span class="material-symbols-outlined">play_arrow</span> Play
+        </button>
+        <button class="btn" onclick="pauseAnimation()">
+          <span class="material-symbols-outlined">pause</span> Pause
+        </button>
+      </div>
     </div>
   </div>
 
@@ -448,7 +453,7 @@
     </div>
 
     <!-- Main SmartBoard Stage Area -->
-    <div class="board-area">
+    <div class="board-area" id="boardArea">
       <div id="whiteboardPlaceholder" class="whiteboard-placeholder">
         <span class="material-symbols-outlined">interactive_space</span>
         <h2>Ready to Explore</h2>
@@ -538,8 +543,11 @@
             { name: "Balbharati Books ↗", url: "https://books.ebalbharati.in/ebook.aspx", external: true }
           ]
         }
+      },
+      cloudinary: {
+        title: "My PDF E-Library",
+        folders: {} // Cloudinary folders will automatically build inside this object
       }
-      // Cloudinary books will be injected here automatically by fetchBooksFromCloudinary()
     };
 
     let currentMode = '3d'; // Default active tab is '3d'
@@ -573,20 +581,19 @@
 
     function onSearchInput(event) {
       if (currentMode === '3d') {
-        if (event.key === 'Enter') {
-          performSketchfabSearch();
-        }
+        if (event.key === 'Enter') performSketchfabSearch();
       } else {
         filterSimulations();
       }
     }
 
     document.getElementById('searchInput').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && currentMode === '3d') {
-        performSketchfabSearch();
-      }
+      if (e.key === 'Enter' && currentMode === '3d') performSketchfabSearch();
     });
 
+    // -----------------------------------------
+    // 4. Recursive Tree Renderer
+    // -----------------------------------------
     function renderTree() {
       const container = document.getElementById("simTree");
       container.innerHTML = "";
@@ -597,52 +604,112 @@
       else if (currentMode === 'ebooks') activeData = eBooksData;
       else return;
 
-      for (const [subjKey, subject] of Object.entries(activeData)) {
-        const subjHeader = document.createElement("div");
-        subjHeader.className = "subject-header";
-        subjHeader.innerHTML = `<span>${subject.title}</span> <span class="material-symbols-outlined" style="font-size: 1.2rem;">expand_more</span>`;
+      for (const [key, category] of Object.entries(activeData)) {
+        // Main Header (e.g. "Physics", "My PDF E-Library")
+        const catHeader = document.createElement("div");
+        catHeader.className = "subject-header";
+        catHeader.innerHTML = `<span>${category.title || key}</span> <span class="material-symbols-outlined">expand_more</span>`;
 
-        const subjContent = document.createElement("div");
-        subjContent.id = `subj-${subjKey}`;
-        subjContent.classList.add("hidden");
+        const catContent = document.createElement("div");
+        catContent.classList.add("hidden");
+        catContent.style.paddingLeft = "8px"; // indent
 
-        for (const [chapterName, sims] of Object.entries(subject.chapters)) {
-          const chapTitle = document.createElement("div");
-          chapTitle.className = "chapter-title";
-          chapTitle.innerText = chapterName;
-          subjContent.appendChild(chapTitle);
+        // Handle flat legacy chapters (PhET / Videos)
+        if (category.chapters) {
+          for (const [chapName, sims] of Object.entries(category.chapters)) {
+            const chapHeader = document.createElement("div");
+            chapHeader.className = "subject-header";
+            chapHeader.style.backgroundColor = "transparent";
+            chapHeader.style.borderLeft = "2px solid var(--border)";
+            chapHeader.style.marginTop = "4px";
+            chapHeader.innerHTML = `<span style="font-size:0.85rem; color:var(--primary); font-weight:700; text-transform:uppercase;">${chapName}</span> <span class="material-symbols-outlined" style="font-size:1.2rem;">expand_more</span>`;
 
-          if (sims.length === 0) {
-            const emptyEl = document.createElement("div");
-            emptyEl.className = "sim-item";
-            emptyEl.innerText = "Coming Soon...";
-            emptyEl.style.cursor = "default";
-            emptyEl.style.opacity = "0.6";
-            subjContent.appendChild(emptyEl);
-          } else {
-            sims.forEach(sim => {
-              const simEl = document.createElement("div");
-              simEl.className = "sim-item";
-              simEl.innerText = sim.name;
-              simEl.onclick = () => loadSimulation(sim.name, sim.url, sim.external);
-              subjContent.appendChild(simEl);
-            });
+            const chapContent = document.createElement("div");
+            chapContent.classList.add("hidden");
+
+            if (sims.length === 0) {
+              chapContent.innerHTML = `<div class="sim-item" style="opacity:0.6; cursor:default;">Coming Soon...</div>`;
+            } else {
+              sims.forEach(sim => {
+                const simEl = document.createElement("div");
+                simEl.className = "sim-item";
+                simEl.innerText = sim.name;
+                simEl.onclick = () => loadSimulation(sim.name, sim.url, sim.external);
+                chapContent.appendChild(simEl);
+              });
+            }
+
+            chapHeader.onclick = (e) => {
+              e.stopPropagation();
+              chapContent.classList.toggle("hidden");
+              chapHeader.querySelector('.material-symbols-outlined').innerText = chapContent.classList.contains("hidden") ? "expand_more" : "expand_less";
+            };
+
+            catContent.appendChild(chapHeader);
+            catContent.appendChild(chapContent);
           }
         }
 
-        subjHeader.onclick = () => {
-          subjContent.classList.toggle("hidden");
-          const icon = subjHeader.querySelector('.material-symbols-outlined');
-          icon.innerText = subjContent.classList.contains("hidden") ? "expand_more" : "expand_less";
+        // Handle Deeply Nested Folders (Cloudinary E-Books)
+        if (category.folders) {
+          buildRecursiveFolders(category.folders, catContent);
+        }
+
+        catHeader.onclick = () => {
+          catContent.classList.toggle("hidden");
+          catHeader.querySelector('.material-symbols-outlined').innerText = catContent.classList.contains("hidden") ? "expand_more" : "expand_less";
         };
 
-        container.appendChild(subjHeader);
-        container.appendChild(subjContent);
+        container.appendChild(catHeader);
+        container.appendChild(catContent);
       }
     }
 
+    function buildRecursiveFolders(folderObj, parentContainer) {
+      // Sort keys alphabetically so folders appear in order
+      const sortedKeys = Object.keys(folderObj).sort();
+
+      sortedKeys.forEach(folderName => {
+        const contents = folderObj[folderName];
+
+        if (folderName === "_files") {
+          // Render files in this level
+          contents.forEach(file => {
+            const fileEl = document.createElement("div");
+            fileEl.className = "sim-item";
+            fileEl.innerHTML = `<span class="material-symbols-outlined" style="font-size: 1.1rem; color: #ef4444; margin-right: 4px;">picture_as_pdf</span> ${file.name}`;
+            fileEl.onclick = () => loadSimulation(file.name, file.url, file.external);
+            parentContainer.appendChild(fileEl);
+          });
+        } else {
+          // Render a sub-folder
+          const folderHeader = document.createElement("div");
+          folderHeader.className = "subject-header";
+          folderHeader.style.backgroundColor = "transparent";
+          folderHeader.style.borderLeft = "2px solid var(--border)";
+          folderHeader.style.marginTop = "4px";
+          folderHeader.innerHTML = `<span style="font-size:0.85rem; color:var(--text-main); font-weight:600;"><span class="material-symbols-outlined" style="font-size:1.1rem; vertical-align:text-bottom; margin-right:6px; color:var(--secondary)">folder</span>${folderName}</span> <span class="material-symbols-outlined" style="font-size:1.2rem;">expand_more</span>`;
+
+          const folderContent = document.createElement("div");
+          folderContent.classList.add("hidden");
+          folderContent.style.paddingLeft = "12px";
+
+          buildRecursiveFolders(contents, folderContent);
+
+          folderHeader.onclick = (e) => {
+            e.stopPropagation();
+            folderContent.classList.toggle("hidden");
+            folderHeader.querySelector('.material-symbols-outlined:last-child').innerText = folderContent.classList.contains("hidden") ? "expand_more" : "expand_less";
+          };
+
+          parentContainer.appendChild(folderHeader);
+          parentContainer.appendChild(folderContent);
+        }
+      });
+    }
+
     // -----------------------------------------
-    // 4. Cloudinary Automated E-Books Fetch
+    // 5. Cloudinary Automated E-Books Fetch
     // -----------------------------------------
     async function fetchBooksFromCloudinary() {
       const cloudName = 'jkhyxfzz';
@@ -659,45 +726,44 @@
         }
 
         const data = await response.json();
-        const cloudinaryGroups = {};
+        const cloudinaryTree = {};
 
-        // Parse Cloudinary file structures into the SmartBoard UI Tree
+        // Parse Cloudinary file paths dynamically into a deeply nested tree
         data.resources.forEach(file => {
-            const folderParts = file.public_id.split('/');
+            // file.public_id is like "NCERT BOOKS/Class 5/Arts/book.pdf"
+            const parts = file.public_id.split('/');
+            const fileName = parts.pop(); // isolate the filename
+
+            let currentLevel = cloudinaryTree;
             
-            let classLevel = "Uncategorized";
-            let subject = "General";
-            let fileName = file.public_id;
+            // Build the folder structure dynamically
+            parts.forEach(folderName => {
+                if (!currentLevel[folderName]) {
+                    currentLevel[folderName] = {};
+                }
+                currentLevel = currentLevel[folderName];
+            });
 
-            // Backward count logic from previous step: Class X -> Subject -> filename
-            if (folderParts.length >= 3) {
-                fileName = folderParts[folderParts.length - 1];   
-                subject = folderParts[folderParts.length - 2];    
-                classLevel = folderParts[folderParts.length - 3]; 
-            }
-
-            const safeClassId = "cloud_" + classLevel.replace(/\s+/g, '_').toLowerCase();
-
-            if (!cloudinaryGroups[safeClassId]) {
-                cloudinaryGroups[safeClassId] = {
-                    title: classLevel,
-                    chapters: {}
-                };
-            }
-
-            if (!cloudinaryGroups[safeClassId].chapters[subject]) {
-                cloudinaryGroups[safeClassId].chapters[subject] = [];
+            // Initialize the files array if it doesn't exist yet at this deep level
+            if (!currentLevel._files) {
+                currentLevel._files = [];
             }
 
             let format = file.format || 'pdf';
-            cloudinaryGroups[safeClassId].chapters[subject].push({
+            
+            // #toolbar=0&navpanes=0 removes download/print headers from the browser PDF viewer.
+            // view=FitH forces the PDF to fit the horizontal width of the screen.
+            let pdfViewerUrl = `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${file.public_id}.${format}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+
+            currentLevel._files.push({
                 name: fileName, 
-                url: `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${file.public_id}.${format}`
+                url: pdfViewerUrl,
+                external: false
             });
         });
 
-        // Merge generated Cloudinary classes into the static eBooksData object
-        Object.assign(eBooksData, cloudinaryGroups);
+        // Insert the dynamic folder structure into our eBooksData object
+        eBooksData.cloudinary.folders = cloudinaryTree;
 
         // If currently viewing the ebooks tab while it loaded, refresh the menu tree
         if (currentMode === 'ebooks') {
@@ -712,9 +778,8 @@
     // Execute the Cloudinary fetch immediately on load
     window.addEventListener('load', fetchBooksFromCloudinary);
 
-
     // -----------------------------------------
-    // 5. Sketchfab 3D Models Integration
+    // 6. Sketchfab 3D Models Integration
     // -----------------------------------------
     async function performSketchfabSearch() {
       const query = document.getElementById('searchInput').value.trim();
@@ -767,12 +832,19 @@
       const iframe = document.getElementById("phetIframe");
       const placeholder = document.getElementById("whiteboardPlaceholder");
       const titleSpan = document.getElementById("active-sim-title");
+      const titleText = document.getElementById("title-text");
       const modelControls = document.getElementById("sketchfabControls");
+      const fullscreenBtn = document.getElementById("fullscreenBtn");
 
       placeholder.classList.add("hidden");
       iframe.classList.remove("hidden");
-      titleSpan.innerHTML = `<span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: text-bottom; color: var(--primary);">view_in_ar</span> ${name}`;
-      modelControls.classList.remove("hidden");
+      
+      titleSpan.querySelector('.material-symbols-outlined').innerText = 'view_in_ar';
+      titleSpan.querySelector('.material-symbols-outlined').style.color = 'var(--primary)';
+      titleText.innerText = name;
+      
+      modelControls.style.display = "flex";
+      fullscreenBtn.classList.remove("hidden");
 
       // Initialize Sketchfab Viewer API
       viewerAPI = null;
@@ -790,13 +862,8 @@
       });
     }
 
-    function playAnimation() {
-      if (viewerAPI) viewerAPI.play();
-    }
-
-    function pauseAnimation() {
-      if (viewerAPI) viewerAPI.pause();
-    }
+    function playAnimation() { if (viewerAPI) viewerAPI.play(); }
+    function pauseAnimation() { if (viewerAPI) viewerAPI.pause(); }
 
     // -----------------------------------------
     // General Functions
@@ -812,12 +879,14 @@
       }
 
       // Hide Sketchfab controls if switching away from 3D models
-      document.getElementById("sketchfabControls").classList.add("hidden");
+      document.getElementById("sketchfabControls").style.display = "none";
+      document.getElementById("fullscreenBtn").classList.remove("hidden");
       viewerAPI = null;
 
       const iframe = document.getElementById("phetIframe");
       const placeholder = document.getElementById("whiteboardPlaceholder");
       const titleSpan = document.getElementById("active-sim-title");
+      const titleText = document.getElementById("title-text");
 
       iframe.src = url;
       iframe.classList.remove("hidden");
@@ -827,7 +896,20 @@
       if(currentMode === "videos") icon = "smart_display";
       if(currentMode === "ebooks") icon = "menu_book";
       
-      titleSpan.innerHTML = `<span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: text-bottom; color: var(--primary);">${icon}</span> ${name}`;
+      titleSpan.querySelector('.material-symbols-outlined').innerText = icon;
+      titleSpan.querySelector('.material-symbols-outlined').style.color = 'var(--primary)';
+      titleText.innerText = name;
+    }
+
+    function toggleFullScreen() {
+      const board = document.getElementById('boardArea');
+      if (!document.fullscreenElement) {
+        board.requestFullscreen().catch(err => {
+          console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
     }
 
     function filterSimulations() {
