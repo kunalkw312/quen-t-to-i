@@ -533,7 +533,7 @@
     };
 
     // -----------------------------------------
-    // 3. e-Book Library Data (Dynamic + Static)
+    // 3. e-Book Library Data (Static Roots)
     // -----------------------------------------
     const eBooksData = {
       maharashtra: {
@@ -543,11 +543,8 @@
             { name: "Balbharati Books ↗", url: "https://books.ebalbharati.in/ebook.aspx", external: true }
           ]
         }
-      },
-      cloudinary: {
-        title: " Official NCERT Books",
-        folders: {} // Cloudinary folders will automatically build inside this object
       }
+      // Dynamic Cloudinary Root Folders (like NCERT BOOKS) will automatically inject here
     };
 
     let currentMode = '3d'; // Default active tab is '3d'
@@ -605,7 +602,7 @@
       else return;
 
       for (const [key, category] of Object.entries(activeData)) {
-        // Main Header (e.g. "Physics", "My PDF E-Library")
+        // Main Header (e.g. "Physics", "NCERT BOOKS")
         const catHeader = document.createElement("div");
         catHeader.className = "subject-header";
         catHeader.innerHTML = `<span>${category.title || key}</span> <span class="material-symbols-outlined">expand_more</span>`;
@@ -614,7 +611,7 @@
         catContent.classList.add("hidden");
         catContent.style.paddingLeft = "8px"; // indent
 
-        // Handle flat legacy chapters (PhET / Videos)
+        // Handle flat legacy chapters (PhET / Videos / Static Books)
         if (category.chapters) {
           for (const [chapName, sims] of Object.entries(category.chapters)) {
             const chapHeader = document.createElement("div");
@@ -726,17 +723,29 @@
         }
 
         const data = await response.json();
-        const cloudinaryTree = {};
 
-        // Parse Cloudinary file paths dynamically into a deeply nested tree
+        // Parse Cloudinary file paths dynamically into the tree
         data.resources.forEach(file => {
-            // file.public_id is like "NCERT BOOKS/Class 5/Arts/book.pdf"
             const parts = file.public_id.split('/');
-            const fileName = parts.pop(); // isolate the filename
-
-            let currentLevel = cloudinaryTree;
             
-            // Build the folder structure dynamically
+            // 1. Isolate the actual file name
+            const fileName = parts.pop(); 
+
+            // 2. The very first folder (e.g. "NCERT BOOKS") becomes a top-level root category
+            const rootFolderName = parts.length > 0 ? parts.shift() : "Uncategorized Books";
+            const rootKey = "cloud_" + rootFolderName.replace(/\s+/g, '_').toLowerCase();
+
+            // 3. Create the root category if it doesn't exist in our eBooksData yet
+            if (!eBooksData[rootKey]) {
+                eBooksData[rootKey] = {
+                    title: rootFolderName,
+                    folders: {}
+                };
+            }
+
+            let currentLevel = eBooksData[rootKey].folders;
+            
+            // 4. Build the inner folder hierarchy dynamically (e.g., Class 10 > English > jhks1dd)
             parts.forEach(folderName => {
                 if (!currentLevel[folderName]) {
                     currentLevel[folderName] = {};
@@ -744,16 +753,16 @@
                 currentLevel = currentLevel[folderName];
             });
 
-            // Initialize the files array if it doesn't exist yet at this deep level
             if (!currentLevel._files) {
                 currentLevel._files = [];
             }
 
             let format = file.format || 'pdf';
+            let rawPdfUrl = `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${file.public_id}.${format}`;
             
-            // #toolbar=0&navpanes=0 removes download/print headers from the browser PDF viewer.
-            // view=FitH forces the PDF to fit the horizontal width of the screen.
-            let pdfViewerUrl = `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${file.public_id}.${format}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+            // 5. WRAP IN GOOGLE DOCS VIEWER: This completely bypasses Cloudinary's "Open" button 
+            // and forces the PDF to render fully inline inside the iframe.
+            let pdfViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(rawPdfUrl)}&embedded=true`;
 
             currentLevel._files.push({
                 name: fileName, 
@@ -761,9 +770,6 @@
                 external: false
             });
         });
-
-        // Insert the dynamic folder structure into our eBooksData object
-        eBooksData.cloudinary.folders = cloudinaryTree;
 
         // If currently viewing the ebooks tab while it loaded, refresh the menu tree
         if (currentMode === 'ebooks') {
