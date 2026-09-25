@@ -3,174 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nano Banana Pro Diagram Engine</title>
-    <script src="https://js.puter.com/v2/"></script>
-    <style>
-        :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --primary: #f59e0b;
-            --primary-hover: #d97706;
-            --text: #0f172a;
-            --border: #cbd5e1;
-        }
-
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            padding: 40px 20px;
-            margin: 0;
-        }
-
-        .container {
-            background: var(--surface);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-            max-width: 650px;
-            width: 100%;
-        }
-
-        h1 {
-            text-align: center;
-            margin-top: 0;
-            font-size: 1.5rem;
-        }
-
-        .subtitle {
-            text-align: center;
-            font-size: 0.85rem;
-            color: #64748b;
-            margin-bottom: 20px;
-        }
-
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        input {
-            flex-grow: 1;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        input:focus {
-            border-color: var(--primary);
-        }
-
-        button.search-action {
-            padding: 12px 20px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        button.search-action:hover {
-            background: var(--primary-hover);
-        }
-
-        button:disabled {
-            background: #94a3b8;
-            cursor: not-allowed;
-        }
-
-        .result {
-            margin-top: 20px;
-            text-align: center;
-            min-height: 350px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border: 2px dashed var(--border);
-            border-radius: 8px;
-            background: #ffffff;
-            padding: 15px;
-        }
-
-        img {
-            max-width: 100%;
-            max-height: 450px;
-            border-radius: 6px;
-            display: none;
-            background: white;
-        }
-
-        .status {
-            color: #64748b;
-            font-size: 0.95rem;
-        }
-    </style>
+    <title>Automated E-Books Library</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-slate-50 min-h-screen font-sans">
 
-    <div class="container">
-        <h1>Nano Banana Pro Engine</h1>
-        <div class="subtitle">Direct, keyless integration via Puter.js.</div>
-        
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search science topic (e.g., Photosynthesis)...">
-            <button class="search-action" id="searchBtn">Generate Diagram</button>
+    <nav class="bg-blue-600 text-white shadow-md p-4">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-wide">📚 E-Books Library</h1>
+            <span id="loadingText" class="text-sm bg-blue-700 px-3 py-1 rounded-full animate-pulse">Loading Books...</span>
         </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-6 mt-4">
         
-        <div class="result">
-            <div id="status" class="status">Type an educational keyword.</div>
-            <img id="image" alt="Educational Diagram">
+        <!-- Filters (Options will be added automatically by JavaScript) -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-8 flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Select Class</label>
+                <select id="classFilter" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="all">All Classes</option>
+                </select>
+            </div>
+            
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Select Subject</label>
+                <select id="subjectFilter" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="all">All Subjects</option>
+                </select>
+            </div>
+
+            <button onclick="filterBooks()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition duration-150">
+                Filter
+            </button>
         </div>
-    </div>
+
+        <!-- Books Grid -->
+        <div id="booksGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Books will magically appear here -->
+        </div>
+
+    </main>
 
     <script>
-        const input = document.getElementById('searchInput');
-        const btn = document.getElementById('searchBtn');
-        const status = document.getElementById('status');
-        const img = document.getElementById('image');
+        // Your Cloudinary Details
+        const cloudName = 't68b4cgi';
+        const tagName = 'books'; 
+        
+        // This is the Cloudinary API link that returns all files with the 'books' tag
+        const listUrl = `https://res.cloudinary.com/${cloudName}/image/list/${tagName}.json`;
 
-        btn.addEventListener('click', async () => {
-            const topic = input.value.trim();
-            if (!topic) return;
+        let booksDatabase = [];
 
-            // Strict textbook styling prompt
-            const engineeredPrompt = `highly accurate educational scientific textbook diagram of ${topic}, clean white background, vector graphic schematic style, clear English text labels with pointing arrows, no background clutter, academic, instructional`;
-
-            status.style.display = 'block';
-            status.textContent = 'Authenticating and generating...';
-            img.style.display = 'none';
-            btn.disabled = true;
-
+        // 1. Fetch the files directly from Cloudinary
+        async function fetchBooksFromCloudinary() {
             try {
-                // Fetch the image using the specific Nano Banana Pro model identifier
-                const returnedImgElement = await puter.ai.txt2img(engineeredPrompt, { 
-                    model: "gemini-3-pro-image-preview" 
-                });
+                const response = await fetch(listUrl);
                 
-                // Extract the src from the returned HTMLImageElement to preserve our custom UI styling
-                img.src = returnedImgElement.src;
-                
-                img.onload = () => {
-                    status.style.display = 'none';
-                    img.style.display = 'block';
-                    btn.disabled = false;
-                };
-            } catch (err) {
-                status.textContent = 'Error: ' + err.message;
-                btn.disabled = false;
-            }
-        });
+                if (!response.ok) {
+                    throw new Error("Could not fetch books. Did you enable 'Resource List' in Cloudinary Settings and add the 'books' tag?");
+                }
 
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') btn.click();
-        });
+                const data = await response.json();
+
+                // 2. Turn the Cloudinary data into our book layout
+                booksDatabase = data.resources.map(file => {
+                    // file.public_id looks like: "NCERT BOOKS/Class 5/Arts/eebu101"
+                    const folderParts = file.public_id.split('/');
+                    
+                    let classLevel = "Unknown";
+                    let subject = "Unknown";
+                    let fileName = file.public_id;
+
+                    // If it matches your PC folder structure
+                    if (folderParts.length >= 4) {
+                        classLevel = folderParts[1]; // e.g., "Class 5"
+                        subject = folderParts[2];    // e.g., "Arts"
+                        fileName = folderParts[folderParts.length - 1]; // e.g., "eebu101"
+                    }
+
+                    return {
+                        title: `${subject} Book`,
+                        classLevel: classLevel,
+                        subject: subject,
+                        chapter: fileName, 
+                        fileUrl: `https://res.cloudinary.com/${cloudName}/image/upload/v${file.version}/${file.public_id}.${file.format}`
+                    };
+                });
+
+                document.getElementById('loadingText').style.display = 'none'; // Hide loading text
+                
+                populateDropdowns();
+                displayBooks(booksDatabase);
+
+            } catch (error) {
+                document.getElementById('loadingText').innerText = "Error Loading Books";
+                document.getElementById('loadingText').classList.replace('bg-blue-700', 'bg-red-600');
+                document.getElementById('booksGrid').innerHTML = `<p class="text-red-500 font-bold col-span-full">${error.message}</p>`;
+            }
+        }
+
+        // 3. Automatically create the Class and Subject dropdown options
+        function populateDropdowns() {
+            const classFilter = document.getElementById('classFilter');
+            const subjectFilter = document.getElementById('subjectFilter');
+
+            // Find all unique classes and subjects using a Set
+            const uniqueClasses = [...new Set(booksDatabase.map(book => book.classLevel))].sort();
+            const uniqueSubjects = [...new Set(booksDatabase.map(book => book.subject))].sort();
+
+            uniqueClasses.forEach(cls => {
+                if(cls !== "Unknown") classFilter.innerHTML += `<option value="${cls}">${cls}</option>`;
+            });
+
+            uniqueSubjects.forEach(sub => {
+                if(sub !== "Unknown") subjectFilter.innerHTML += `<option value="${sub}">${sub}</option>`;
+            });
+        }
+
+        // 4. Draw the books on the screen
+        function displayBooks(books) {
+            const grid = document.getElementById('booksGrid');
+            grid.innerHTML = ''; 
+
+            if (books.length === 0) {
+                grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-10">No books match this filter.</p>';
+                return;
+            }
+
+            books.forEach(book => {
+                const card = document.createElement('div');
+                card.className = "bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col";
+                
+                card.innerHTML = `
+                    <div class="mb-4">
+                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">${book.classLevel}</span>
+                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded ml-1">${book.subject}</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-1">${book.title}</h3>
+                    <p class="text-sm text-gray-500 mb-4">File: ${book.chapter}</p>
+                    
+                    <div class="mt-auto">
+                        <a href="${book.fileUrl}" target="_blank" class="block w-full text-center bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition duration-150">
+                            Open PDF
+                        </a>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // 5. Handle the Filter button click
+        function filterBooks() {
+            const selectedClass = document.getElementById('classFilter').value;
+            const selectedSubject = document.getElementById('subjectFilter').value;
+
+            const filtered = booksDatabase.filter(book => {
+                const matchClass = (selectedClass === 'all') || (book.classLevel === selectedClass);
+                const matchSubject = (selectedSubject === 'all') || (book.subject === selectedSubject);
+                return matchClass && matchSubject;
+            });
+
+            displayBooks(filtered);
+        }
+
+        // Start the process as soon as the page loads
+        window.onload = () => {
+            fetchBooksFromCloudinary();
+        };
     </script>
 </body>
 </html>
