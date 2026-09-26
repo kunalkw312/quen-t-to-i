@@ -182,40 +182,36 @@
         const toolEraserBtn = document.getElementById('toolEraser');
         
         let isDrawing = false;
-        let currentTool = 'pen'; // 'pen' or 'eraser'
+        let currentTool = 'pen'; 
 
-        // Resize Canvas safely
         function resizeCanvas() {
             const rect = board.getBoundingClientRect();
-            // Store current drawing before resizing
             const data = canvas.toDataURL();
             canvas.width = rect.width;
             canvas.height = rect.height;
             setupCtx();
             
-            // Restore drawing
             const img = new Image();
             img.src = data;
             img.onload = () => ctx.drawImage(img, 0, 0);
         }
 
         window.addEventListener('resize', resizeCanvas);
-        resizeCanvas(); // initial sizing
+        resizeCanvas();
 
         function setupCtx() {
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             if (currentTool === 'pen') {
                 ctx.lineWidth = 4;
-                ctx.strokeStyle = '#1e293b'; // Dark blue-black
+                ctx.strokeStyle = '#1e293b'; 
                 ctx.globalCompositeOperation = "source-over";
             } else {
-                ctx.lineWidth = 30; // Thicker for eraser
-                ctx.globalCompositeOperation = "destination-out"; // Acts as true eraser
+                ctx.lineWidth = 30; 
+                ctx.globalCompositeOperation = "destination-out"; 
             }
         }
 
-        // --- TOOL SWITCHING ---
         toolPenBtn.addEventListener('click', () => {
             currentTool = 'pen';
             toolPenBtn.classList.add('active');
@@ -230,7 +226,6 @@
             setupCtx();
         });
 
-        // --- DRAWING LOGIC ---
         function getCoordinates(e) {
             const rect = canvas.getBoundingClientRect();
             let clientX = e.clientX, clientY = e.clientY;
@@ -262,24 +257,17 @@
             ctx.beginPath();
         }
 
-        // Mouse Events
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         window.addEventListener('mouseup', stopDrawing);
 
-        // Touch Events
         canvas.addEventListener('touchstart', startDrawing, {passive: false});
         canvas.addEventListener('touchmove', draw, {passive: false});
         window.addEventListener('touchend', stopDrawing);
 
-        // Clear Board
         document.getElementById('clearBtn').addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         });
-
-        // ==========================================
-        //  AI VISION API LOGIC (GEMINI 1.5 FLASH)
-        // ==========================================
 
         let currentPendingAction = null;
 
@@ -315,20 +303,18 @@
             document.getElementById('resultOverlay').style.display = 'none';
         }
 
-        // Convert the drawing to a Base64 Image string with a White background
         function getCanvasBase64() {
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = canvas.width;
             tempCanvas.height = canvas.height;
             const tempCtx = tempCanvas.getContext('2d');
             
-            // Fill white background so AI can read it properly
             tempCtx.fillStyle = '#ffffff';
             tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
             tempCtx.drawImage(canvas, 0, 0);
             
             const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.8);
-            return dataUrl.split(',')[1]; // Return only base64 string
+            return dataUrl.split(',')[1]; 
         }
 
         async function callGeminiVision(promptText) {
@@ -339,15 +325,18 @@
             }
 
             const base64Image = getCanvasBase64();
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            
+            // Updated to the current gemini-2.5-flash model endpoint
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
+            // Refactored payload keys to standardized camelCase format
             const payload = {
                 contents: [{
                     parts: [
                         { text: promptText },
                         {
-                            inline_data: {
-                                mime_type: "image/jpeg",
+                            inlineData: {
+                                mimeType: "image/jpeg",
                                 data: base64Image
                             }
                         }
@@ -378,10 +367,8 @@
             document.getElementById('loader').style.display = 'none';
             const resultDiv = document.getElementById('resultContent');
             
-            // 1. Convert Markdown to HTML
             resultDiv.innerHTML = marked.parse(markdownText);
             
-            // 2. Render Math formatting beautifully using KaTeX
             renderMathInElement(resultDiv, {
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
@@ -392,8 +379,6 @@
                 throwOnError : false
             });
         }
-
-        // --- ACTION BUTTONS ---
 
         document.getElementById('solveMathBtn').addEventListener('click', async () => {
             currentPendingAction = async () => {
