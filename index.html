@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smartboard - MyScript Live Math Editor</title>
+    <title>Smartboard - MyScript Math Editor</title>
 
     <!-- MyScript iinkJS -->
     <link rel="stylesheet" href="https://unpkg.com/iink-js@2.2.0/dist/iink.min.css">
@@ -56,7 +56,8 @@
         #editor {
             flex-grow: 1;
             width: 100%;
-            touch-action: none; /* Crucial for handwriting on touch devices */
+            min-height: 60vh;
+            touch-action: none; 
         }
 
         /* Live KaTeX Render Area */
@@ -71,12 +72,20 @@
             align-items: center;
             font-size: 24px;
             z-index: 10;
+            text-align: center;
+            overflow-x: auto;
         }
 
         .result-bar.empty {
             color: #94a3b8;
             font-size: 16px;
             font-style: italic;
+        }
+
+        .error-text {
+            color: #ef4444 !important;
+            font-size: 16px !important;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -94,7 +103,7 @@
         
         <!-- Live Math Render area -->
         <div id="resultBar" class="result-bar empty">
-            Start writing math equations above...
+            Connecting to MyScript Server...
         </div>
     </div>
 
@@ -106,74 +115,79 @@
         const redoBtn = document.getElementById('redoBtn');
         const clearBtn = document.getElementById('clearBtn');
         
-        let editor; // Will hold the MyScript editor instance
+        let editor;
 
-        // Hardcoded Keys from 38365.jpg
+        // Hardcoded Keys 
         const APP_KEY = "f5228783-e117-4ec4-b5b9-a5151daf9b54";
         const HMAC_KEY = "6e5647ca-89f3-4e03-bfe4-4bc12a51b9fc";
 
-        // Initialize on Load
         window.addEventListener('load', () => {
-            initMyScript(APP_KEY, HMAC_KEY);
+            // Delay ensures the DOM is sized before registering the canvas
+            setTimeout(() => {
+                initMyScript(APP_KEY, HMAC_KEY);
+            }, 100);
         });
 
-        // --- MYSCRIPT IINKJS INITIALIZATION ---
         function initMyScript(appKey, hmacKey) {
-            // Configuration for Math recognition using WebSockets
             const configuration = {
                 recognitionParams: {
                     type: 'MATH',
-                    protocol: 'WEBSOCKET',
+                    protocol: 'REST', // Changed to REST for maximum GitHub Pages compatibility
                     server: {
+                        scheme: 'https',
+                        host: 'cloud.myscript.com', // Must point to MyScript, NOT GitHub
                         applicationKey: appKey,
                         hmacKey: hmacKey
                     },
                     iink: {
                         math: {
-                            // Request LaTeX output back from the server
                             mimeTypes: ['application/x-latex']
                         }
                     }
                 }
             };
 
-            // Register the editor element
             editor = iink.register(editorElement, configuration);
 
-            // Listen for successful recognition events
+            // Once successfully connected and ready to draw
+            editorElement.addEventListener('loaded', () => {
+                resetResultBar();
+            });
+
             editorElement.addEventListener('exported', (event) => {
                 const exports = event.detail.exports;
-                
-                // Check if LaTeX data was returned
                 if (exports && exports['application/x-latex']) {
-                    const latex = exports['application/x-latex'];
-                    renderMath(latex);
+                    renderMath(exports['application/x-latex']);
                 } else {
                     resetResultBar();
                 }
             });
 
-            // Handle UI button states (disable undo/redo when unavailable)
             editorElement.addEventListener('changed', (event) => {
                 undoBtn.disabled = !event.detail.canUndo;
                 redoBtn.disabled = !event.detail.canRedo;
                 clearBtn.disabled = !event.detail.canClear;
             });
 
-            // Handle connection errors
+            // Display errors if domain/keys are rejected
             editorElement.addEventListener('error', (event) => {
                 console.error("MyScript Error:", event.detail);
-                if(event.detail.message && event.detail.message.includes("Invalid application key")) {
-                    alert("Invalid MyScript API Keys. Please check your developer console.");
+                resultBar.classList.remove('empty');
+                resultBar.classList.add('error-text');
+                
+                let errorMsg = event.detail.message || "Connection failed.";
+                if (errorMsg.includes("Invalid application key") || errorMsg.includes("hmac")) {
+                    errorMsg = "API Key Error. Make sure your GitHub URL is added to the 'Filters' tab in your MyScript Dashboard.";
                 }
+                
+                resultBar.innerText = "Error: " + errorMsg;
             });
         }
 
-        // --- KATEX RENDERING ---
         function renderMath(latexString) {
             resultBar.classList.remove('empty');
+            resultBar.classList.remove('error-text');
             try {
-                // Render LaTeX to the bottom bar
                 katex.render(latexString, resultBar, {
                     displayMode: true,
                     throwOnError: false
@@ -186,18 +200,12 @@
 
         function resetResultBar() {
             resultBar.classList.add('empty');
+            resultBar.classList.remove('error-text');
             resultBar.innerText = "Start writing math equations above...";
         }
 
-        // --- TOOLBAR CONTROLS ---
-        undoBtn.addEventListener('click', () => {
-            if (editor) editor.undo();
-        });
-
-        redoBtn.addEventListener('click', () => {
-            if (editor) editor.redo();
-        });
-
+        undoBtn.addEventListener('click', () => { if (editor) editor.undo(); });
+        redoBtn.addEventListener('click', () => { if (editor) editor.redo(); });
         clearBtn.addEventListener('click', () => {
             if (editor) {
                 editor.clear();
@@ -205,11 +213,8 @@
             }
         });
 
-        // Ensure canvas resizes cleanly with window
         window.addEventListener('resize', () => {
-            if (editor) {
-                editor.resize();
-            }
+            if (editor) editor.resize();
         });
     </script>
 </body>
