@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smartboard - Live Math Editor</title>
-
-    <!-- PEP Polyfill for Mobile Touch Support -->
-    <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
-
-    <!-- MyScript iinkJS (Fixed CDN) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iink-js@2.2.0/dist/iink.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/iink-js@2.2.0/dist/iink.min.js"></script>
-
+    <title>Smartboard - Math & AI Solver</title>
+    
     <!-- KaTeX for Beautiful Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Marked for Markdown text parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
         body {
@@ -23,7 +20,7 @@
             background-color: #eef2f5;
             display: flex; flex-direction: column;
             height: 100vh; overflow: hidden;
-            overscroll-behavior-y: none; /* Prevents pull-to-refresh on mobile */
+            overscroll-behavior-y: none;
         }
 
         .toolbar {
@@ -36,16 +33,18 @@
         }
 
         button {
-            padding: 8px 12px; font-size: 14px;
+            padding: 8px 14px; font-size: 14px;
             border-radius: 6px; border: 1px solid #ccc;
             cursor: pointer; outline: none; background: #fff;
             transition: 0.2s; font-weight: 600; color: #333;
         }
         button:hover { background-color: #f1f5f9; }
         
+        button.action-btn { background-color: #8b5cf6; color: white; border: none; }
+        button.action-btn:hover { background-color: #7c3aed; }
+
         button.danger { background-color: #ef4444; color: white; border: none; }
         button.danger:hover { background-color: #b91c1c; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .board-container {
             position: relative; 
@@ -56,183 +55,205 @@
             flex-direction: column;
         }
 
-        /* MyScript Editor Canvas Area */
-        #editor {
-            position: relative;
+        canvas {
             flex-grow: 1;
             width: 100%;
-            min-height: 60vh;
+            height: 100%;
             touch-action: none;
-            -ms-touch-action: none;
+            cursor: crosshair;
         }
 
-        /* Live KaTeX Render Area */
+        /* Result Bar Area */
         .result-bar {
             background-color: #1e293b;
             color: white;
             padding: 15px;
-            min-height: 100px;
+            min-height: 80px;
+            max-height: 30vh;
+            overflow-y: auto;
             box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-size: 22px;
+            font-size: 18px;
             z-index: 10;
             text-align: center;
-            overflow-x: auto;
-            overflow-y: hidden;
-            white-space: nowrap;
         }
 
         .result-bar.empty {
             color: #94a3b8;
-            font-size: 16px;
+            font-size: 15px;
             font-style: italic;
         }
 
-        .error-text {
-            color: #ef4444 !important;
-            font-size: 14px !important;
-            font-weight: bold;
-            white-space: normal;
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 100;
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(3px);
         }
+
+        .modal {
+            background: white; width: 90%; max-width: 450px;
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 20px; box-sizing: border-box;
+        }
+        .modal h3 { margin-top: 0; color: #1e293b; }
+        .modal input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px;}
     </style>
 </head>
 <body>
 
     <div class="toolbar">
-        <button id="undoBtn" disabled>↶ Undo</button>
-        <button id="redoBtn" disabled>↷ Redo</button>
-        <button id="clearBtn" class="danger" disabled>🗑️ Clear Board</button>
+        <button id="clearBtn" class="danger">🗑️ Clear Board</button>
+        <button id="solveBtn" class="action-btn">✨ Solve Math (AI)</button>
     </div>
 
     <div class="board-container">
-        <div id="editor" touch-action="none"></div>
+        <canvas id="inkCanvas"></canvas>
         <div id="resultBar" class="result-bar empty">
-            Initializing Engine...
+            Draw your math equation above and click "Solve Math"...
+        </div>
+    </div>
+
+    <!-- API Key Modal (Required for free AI Vision processing) -->
+    <div id="apiKeyModal" class="modal-overlay">
+        <div class="modal">
+            <h3>🔑 Enter Gemini API Key</h3>
+            <p style="font-size: 13px; color: #64748b;">To keep handwriting-to-math analysis 100% free and block-free, enter your free Google AI Studio key below:</p>
+            <input type="text" id="apiKeyInput" placeholder="AIzaSy...">
+            <button onclick="saveApiKey()" class="action-btn" style="width: 100%; padding: 10px;">Save & Solve</button>
         </div>
     </div>
 
     <script>
-        const editorElement = document.getElementById('editor');
+        const canvas = document.getElementById('inkCanvas');
+        const ctx = canvas.getContext('2d');
         const resultBar = document.getElementById('resultBar');
-        const undoBtn = document.getElementById('undoBtn');
-        const redoBtn = document.getElementById('redoBtn');
-        const clearBtn = document.getElementById('clearBtn');
         
-        let editor;
+        let isDrawing = false;
 
-        const APP_KEY = "f5228783-e117-4ec4-b5b9-a5151daf9b54";
-        const HMAC_KEY = "6e5647ca-89f3-4e03-bfe4-4bc12a51b9fc";
+        // Resize Canvas cleanly
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const tempImg = canvas.toDataURL();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#1e293b';
 
-        window.addEventListener('load', () => {
-            // Wait slightly to ensure external scripts finish parsing on slow mobile connections
-            setTimeout(initMyScript, 500);
+            const img = new Image();
+            img.src = tempImg;
+            img.onload = () => ctx.drawImage(img, 0, 0);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Drawing Handlers (Supports Mouse and Touch perfectly without external polyfills)
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX = e.clientX, clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        canvas.addEventListener('mousedown', (e) => { isDrawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+        canvas.addEventListener('mousemove', (e) => { if (!isDrawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+        window.addEventListener('mouseup', () => { isDrawing = false; });
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, {passive: false});
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (!isDrawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }, {passive: false});
+        window.addEventListener('touchend', () => { isDrawing = false; });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            resultBar.className = "result-bar empty";
+            resultBar.innerText = "Draw your math equation above and click 'Solve Math'...";
         });
 
-        function initMyScript() {
-            // Safely grab the library whether it loaded as "iink" or "MyScript"
-            const iinkAPI = window.iink || window.MyScript;
-            
-            if (!iinkAPI) {
-                resultBar.classList.remove('empty');
-                resultBar.classList.add('error-text');
-                resultBar.innerText = "Library blocked. Try turning off your ad-blocker or using a different browser.";
-                return;
-            }
+        // --- AI SOLVER INTEGRATION ---
+        function getApiKey() {
+            return localStorage.getItem('gemini_api_key');
+        }
 
-            const configuration = {
-                recognitionParams: {
-                    type: 'MATH',
-                    protocol: 'REST', // Ultra-stable for GitHub pages
-                    server: {
-                        scheme: 'https',
-                        host: 'cloud.myscript.com',
-                        applicationKey: APP_KEY,
-                        hmacKey: HMAC_KEY
-                    },
-                    iink: {
-                        math: {
-                            mimeTypes: ['application/x-latex']
-                        }
-                    }
-                }
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                document.getElementById('apiKeyModal').style.display = 'none';
+                processDrawingWithAI();
+            }
+        }
+
+        document.getElementById('solveBtn').addEventListener('click', () => {
+            if (!getApiKey()) {
+                document.getElementById('apiKeyModal').style.display = 'flex';
+            } else {
+                processDrawingWithAI();
+            }
+        });
+
+        async function processDrawingWithAI() {
+            resultBar.className = "result-bar";
+            resultBar.innerText = "Analyzing handwriting...";
+
+            // Convert canvas to base64 JPEG with white background
+            const tempC = document.createElement('canvas');
+            tempC.width = canvas.width; tempC.height = canvas.height;
+            const tCtx = tempC.getContext('2d');
+            tCtx.fillStyle = '#ffffff';
+            tCtx.fillRect(0, 0, tempC.width, tempC.height);
+            tCtx.drawImage(canvas, 0, 0);
+            const base64Data = tempC.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+            const apiKey = getApiKey();
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: "Analyze the handwritten math expression in this image. Transcribe it and provide the step-by-step solution. Format all math expressions cleanly using LaTeX syntax with $for inline and$$ for block formatting." },
+                        { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+                    ]
+                }]
             };
 
             try {
-                // Register the editor
-                editor = iinkAPI.register(editorElement, configuration);
-
-                editorElement.addEventListener('loaded', () => {
-                    resetResultBar();
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
 
-                editorElement.addEventListener('exported', (event) => {
-                    const exports = event.detail.exports;
-                    if (exports && exports['application/x-latex']) {
-                        renderMath(exports['application/x-latex']);
-                    } else {
-                        resetResultBar();
-                    }
-                });
+                if (!response.ok) throw new Error("API request failed. Check your API key.");
 
-                editorElement.addEventListener('changed', (event) => {
-                    undoBtn.disabled = !event.detail.canUndo;
-                    redoBtn.disabled = !event.detail.canRedo;
-                    clearBtn.disabled = !event.detail.canClear;
-                });
+                const data = await response.json();
+                const textResult = data.candidates[0].content.parts[0].text;
 
-                editorElement.addEventListener('error', (event) => {
-                    console.error("MyScript Error:", event.detail);
-                    resultBar.classList.remove('empty');
-                    resultBar.classList.add('error-text');
-                    
-                    let errorMsg = event.detail.message || "Connection failed.";
-                    if (errorMsg.includes("application key") || errorMsg.includes("hmac")) {
-                        errorMsg = "API Key Error. Ensure the Domain Filter is set to .* and saved in MyScript Dashboard.";
-                    }
-                    
-                    resultBar.innerText = "Connection Error: " + errorMsg;
-                });
-            } catch (err) {
-                resultBar.classList.remove('empty');
-                resultBar.classList.add('error-text');
-                resultBar.innerText = "Setup Error: " + err.message;
-            }
-        }
-
-        function renderMath(latexString) {
-            resultBar.classList.remove('empty');
-            resultBar.classList.remove('error-text');
-            try {
-                katex.render(latexString, resultBar, {
-                    displayMode: true,
+                resultBar.innerHTML = marked.parse(textResult);
+                
+                // Render KaTeX math symbols inside result bar
+                renderMathInElement(resultBar, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
                     throwOnError: false
                 });
+
             } catch (err) {
-                console.error("KaTeX Error:", err);
-                resultBar.innerText = "Formatting error...";
+                resultBar.innerText = "Error: " + err.message;
             }
         }
-
-        function resetResultBar() {
-            resultBar.classList.add('empty');
-            resultBar.classList.remove('error-text');
-            resultBar.innerText = "Draw math here...";
-        }
-
-        undoBtn.addEventListener('click', () => { if (editor) editor.undo(); });
-        redoBtn.addEventListener('click', () => { if (editor) editor.redo(); });
-        clearBtn.addEventListener('click', () => {
-            if (editor) {
-                editor.clear();
-                resetResultBar();
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            if (editor) editor.resize();
-        });
     </script>
 </body>
 </html>
