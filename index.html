@@ -8,9 +8,9 @@
     <!-- PEP Polyfill for Mobile Touch Support -->
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
 
-    <!-- MyScript iinkJS (Switched to jsDelivr for maximum reliability) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iink-js/dist/iink.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/iink-js/dist/iink.min.js"></script>
+    <!-- MyScript iinkJS (Fixed CDN) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iink-js@2.2.0/dist/iink.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/iink-js@2.2.0/dist/iink.min.js"></script>
 
     <!-- KaTeX for Beautiful Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
@@ -122,29 +122,29 @@
         
         let editor;
 
-        // Your exact keys
         const APP_KEY = "f5228783-e117-4ec4-b5b9-a5151daf9b54";
         const HMAC_KEY = "6e5647ca-89f3-4e03-bfe4-4bc12a51b9fc";
 
         window.addEventListener('load', () => {
-            setTimeout(initMyScript, 200);
+            // Wait slightly to ensure external scripts finish parsing on slow mobile connections
+            setTimeout(initMyScript, 500);
         });
 
         function initMyScript() {
-            // Check if the library loaded correctly from the new CDN
+            // Safely grab the library whether it loaded as "iink" or "MyScript"
             const iinkAPI = window.iink || window.MyScript;
             
             if (!iinkAPI) {
                 resultBar.classList.remove('empty');
                 resultBar.classList.add('error-text');
-                resultBar.innerText = "Error: Library failed to load. Check your internet connection or ad-blocker.";
+                resultBar.innerText = "Library blocked. Try turning off your ad-blocker or using a different browser.";
                 return;
             }
 
             const configuration = {
                 recognitionParams: {
                     type: 'MATH',
-                    protocol: 'REST',
+                    protocol: 'REST', // Ultra-stable for GitHub pages
                     server: {
                         scheme: 'https',
                         host: 'cloud.myscript.com',
