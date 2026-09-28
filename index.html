@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smartboard - MyScript Debugger</title>
+    <title>Smartboard - Live Math Editor</title>
 
     <!-- PEP Polyfill for Mobile Touch Support -->
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
 
-    <!-- MyScript iinkJS -->
-    <link rel="stylesheet" href="https://unpkg.com/iink-js@2.2.0/dist/iink.min.css">
-    <script src="https://unpkg.com/iink-js@2.2.0/dist/iink.min.js"></script>
+    <!-- MyScript iinkJS (Switched to jsDelivr for maximum reliability) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iink-js/dist/iink.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/iink-js/dist/iink.min.js"></script>
 
     <!-- KaTeX for Beautiful Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
@@ -23,7 +23,7 @@
             background-color: #eef2f5;
             display: flex; flex-direction: column;
             height: 100vh; overflow: hidden;
-            overscroll-behavior-y: none; 
+            overscroll-behavior-y: none; /* Prevents pull-to-refresh on mobile */
         }
 
         .toolbar {
@@ -39,40 +39,63 @@
             padding: 8px 12px; font-size: 14px;
             border-radius: 6px; border: 1px solid #ccc;
             cursor: pointer; outline: none; background: #fff;
-            font-weight: 600; color: #333;
+            transition: 0.2s; font-weight: 600; color: #333;
         }
+        button:hover { background-color: #f1f5f9; }
+        
         button.danger { background-color: #ef4444; color: white; border: none; }
+        button.danger:hover { background-color: #b91c1c; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        .board-container {
+            position: relative; 
+            flex-grow: 1;
+            width: 100%; 
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* MyScript Editor Canvas Area */
         #editor {
             position: relative;
             flex-grow: 1;
             width: 100%;
-            min-height: 40vh;
+            min-height: 60vh;
             touch-action: none;
             -ms-touch-action: none;
-            background-color: #fff;
         }
 
+        /* Live KaTeX Render Area */
         .result-bar {
-            background-color: #1e293b; color: white;
-            padding: 15px; min-height: 80px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 22px; z-index: 10; text-align: center;
+            background-color: #1e293b;
+            color: white;
+            padding: 15px;
+            min-height: 100px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 22px;
+            z-index: 10;
+            text-align: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
         }
 
-        .result-bar.empty { color: #94a3b8; font-size: 16px; font-style: italic; }
-
-        /* On-Screen Debugger */
-        #debugLog {
-            background: #000; color: #0f0;
-            font-family: monospace; font-size: 11px;
-            height: 150px; overflow-y: scroll;
-            padding: 10px; box-sizing: border-box;
-            border-top: 3px solid #333;
+        .result-bar.empty {
+            color: #94a3b8;
+            font-size: 16px;
+            font-style: italic;
         }
-        .log-error { color: #ff4444; }
-        .log-warn { color: #ffaa00; }
+
+        .error-text {
+            color: #ef4444 !important;
+            font-size: 14px !important;
+            font-weight: bold;
+            white-space: normal;
+        }
     </style>
 </head>
 <body>
@@ -80,138 +103,135 @@
     <div class="toolbar">
         <button id="undoBtn" disabled>↶ Undo</button>
         <button id="redoBtn" disabled>↷ Redo</button>
-        <button id="clearBtn" class="danger" disabled>🗑️ Clear</button>
+        <button id="clearBtn" class="danger" disabled>🗑️ Clear Board</button>
     </div>
 
-    <!-- MyScript Editor -->
-    <div id="editor" touch-action="none"></div>
-    
-    <!-- Math Render Area -->
-    <div id="resultBar" class="result-bar empty">
-        Initializing Engine...
+    <div class="board-container">
+        <div id="editor" touch-action="none"></div>
+        <div id="resultBar" class="result-bar empty">
+            Initializing Engine...
+        </div>
     </div>
-
-    <!-- Live Debugger Console -->
-    <div id="debugLog">System Booting...<br></div>
 
     <script>
-        // --- CUSTOM ON-SCREEN LOGGER ---
-        const debugLog = document.getElementById('debugLog');
-        function printLog(msg, type = 'info') {
-            const span = document.createElement('span');
-            span.innerText = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-            if(type === 'error') span.className = 'log-error';
-            if(type === 'warn') span.className = 'log-warn';
-            debugLog.appendChild(span);
-            debugLog.scrollTop = debugLog.scrollHeight;
-        }
-
-        // Catch global errors
-        window.onerror = function(msg, url, line) {
-            printLog(`JS ERROR: ${msg} (Line ${line})`, 'error');
-            return false;
-        };
-        window.onunhandledrejection = function(e) {
-            printLog(`PROMISE ERROR: ${e.reason}`, 'error');
-        };
-
         const editorElement = document.getElementById('editor');
         const resultBar = document.getElementById('resultBar');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        
         let editor;
 
-        // Keys from your screenshots
+        // Your exact keys
         const APP_KEY = "f5228783-e117-4ec4-b5b9-a5151daf9b54";
         const HMAC_KEY = "6e5647ca-89f3-4e03-bfe4-4bc12a51b9fc";
 
         window.addEventListener('load', () => {
-            printLog("Window loaded. Setting timeout for iink init...");
-            setTimeout(initMyScript, 500);
+            setTimeout(initMyScript, 200);
         });
 
         function initMyScript() {
-            printLog("Initializing MyScript Configuration...");
+            // Check if the library loaded correctly from the new CDN
+            const iinkAPI = window.iink || window.MyScript;
             
-            try {
-                const configuration = {
-                    recognitionParams: {
-                        type: 'MATH',
-                        protocol: 'WEBSOCKET',
-                        server: {
-                            scheme: 'https',
-                            host: 'cloud.myscript.com',
-                            applicationKey: APP_KEY,
-                            hmacKey: HMAC_KEY
-                        },
-                        iink: {
-                            math: {
-                                mimeTypes: ['application/x-latex']
-                            }
+            if (!iinkAPI) {
+                resultBar.classList.remove('empty');
+                resultBar.classList.add('error-text');
+                resultBar.innerText = "Error: Library failed to load. Check your internet connection or ad-blocker.";
+                return;
+            }
+
+            const configuration = {
+                recognitionParams: {
+                    type: 'MATH',
+                    protocol: 'REST',
+                    server: {
+                        scheme: 'https',
+                        host: 'cloud.myscript.com',
+                        applicationKey: APP_KEY,
+                        hmacKey: HMAC_KEY
+                    },
+                    iink: {
+                        math: {
+                            mimeTypes: ['application/x-latex']
                         }
                     }
-                };
+                }
+            };
 
-                printLog("Calling iink.register()...");
-                editor = iink.register(editorElement, configuration);
-                printLog("iink.register() executed successfully.");
+            try {
+                // Register the editor
+                editor = iinkAPI.register(editorElement, configuration);
 
-                // Event Listeners
                 editorElement.addEventListener('loaded', () => {
-                    printLog("Event: 'loaded' fired. Canvas is ready!");
-                    resultBar.classList.add('empty');
-                    resultBar.innerText = "Draw math here...";
-                });
-
-                editorElement.addEventListener('error', (event) => {
-                    printLog(`Event: 'error' fired! Details: ${JSON.stringify(event.detail)}`, 'error');
-                    resultBar.innerText = "Connection Failed. See debug log.";
+                    resetResultBar();
                 });
 
                 editorElement.addEventListener('exported', (event) => {
-                    printLog("Event: 'exported' fired. Receiving math data...");
                     const exports = event.detail.exports;
                     if (exports && exports['application/x-latex']) {
                         renderMath(exports['application/x-latex']);
+                    } else {
+                        resetResultBar();
                     }
                 });
 
                 editorElement.addEventListener('changed', (event) => {
-                    printLog("Event: 'changed' fired. Board updated.");
-                    document.getElementById('undoBtn').disabled = !event.detail.canUndo;
-                    document.getElementById('redoBtn').disabled = !event.detail.canRedo;
-                    document.getElementById('clearBtn').disabled = !event.detail.canClear;
+                    undoBtn.disabled = !event.detail.canUndo;
+                    redoBtn.disabled = !event.detail.canRedo;
+                    clearBtn.disabled = !event.detail.canClear;
                 });
 
-            } catch(err) {
-                printLog(`CRITICAL INIT ERROR: ${err.message}`, 'error');
+                editorElement.addEventListener('error', (event) => {
+                    console.error("MyScript Error:", event.detail);
+                    resultBar.classList.remove('empty');
+                    resultBar.classList.add('error-text');
+                    
+                    let errorMsg = event.detail.message || "Connection failed.";
+                    if (errorMsg.includes("application key") || errorMsg.includes("hmac")) {
+                        errorMsg = "API Key Error. Ensure the Domain Filter is set to .* and saved in MyScript Dashboard.";
+                    }
+                    
+                    resultBar.innerText = "Connection Error: " + errorMsg;
+                });
+            } catch (err) {
+                resultBar.classList.remove('empty');
+                resultBar.classList.add('error-text');
+                resultBar.innerText = "Setup Error: " + err.message;
             }
         }
 
         function renderMath(latexString) {
             resultBar.classList.remove('empty');
+            resultBar.classList.remove('error-text');
             try {
-                printLog(`Rendering LaTeX: ${latexString}`);
-                katex.render(latexString, resultBar, { displayMode: true, throwOnError: false });
+                katex.render(latexString, resultBar, {
+                    displayMode: true,
+                    throwOnError: false
+                });
             } catch (err) {
-                printLog(`KaTeX Error: ${err.message}`, 'error');
+                console.error("KaTeX Error:", err);
+                resultBar.innerText = "Formatting error...";
             }
         }
 
-        document.getElementById('undoBtn').addEventListener('click', () => { if(editor) editor.undo(); });
-        document.getElementById('redoBtn').addEventListener('click', () => { if(editor) editor.redo(); });
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            if(editor) {
+        function resetResultBar() {
+            resultBar.classList.add('empty');
+            resultBar.classList.remove('error-text');
+            resultBar.innerText = "Draw math here...";
+        }
+
+        undoBtn.addEventListener('click', () => { if (editor) editor.undo(); });
+        redoBtn.addEventListener('click', () => { if (editor) editor.redo(); });
+        clearBtn.addEventListener('click', () => {
+            if (editor) {
                 editor.clear();
-                resultBar.classList.add('empty');
-                resultBar.innerText = "Draw math here...";
-                printLog("Board cleared.");
+                resetResultBar();
             }
         });
 
         window.addEventListener('resize', () => {
-            if (editor) {
-                printLog("Window resized. Updating editor layout.");
-                editor.resize();
-            }
+            if (editor) editor.resize();
         });
     </script>
 </body>
