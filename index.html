@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smartboard - MyScript Math Editor</title>
+    <title>Smartboard - Live Math Editor</title>
+
+    <!-- PEP Polyfill for Mobile Touch Support (CRITICAL FOR PHONES) -->
+    <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
 
     <!-- MyScript iinkJS -->
     <link rel="stylesheet" href="https://unpkg.com/iink-js@2.2.0/dist/iink.min.css">
@@ -20,19 +23,20 @@
             background-color: #eef2f5;
             display: flex; flex-direction: column;
             height: 100vh; overflow: hidden;
+            overscroll-behavior-y: none; /* Prevents pull-to-refresh on mobile */
         }
 
         .toolbar {
             background-color: #ffffff;
-            padding: 12px 20px;
+            padding: 12px 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex; gap: 15px;
+            display: flex; gap: 10px;
             align-items: center; justify-content: center;
             flex-wrap: wrap; z-index: 10;
         }
 
         button {
-            padding: 8px 16px; font-size: 15px;
+            padding: 8px 12px; font-size: 14px;
             border-radius: 6px; border: 1px solid #ccc;
             cursor: pointer; outline: none; background: #fff;
             transition: 0.2s; font-weight: 600; color: #333;
@@ -52,28 +56,31 @@
             flex-direction: column;
         }
 
-        /* MyScript Editor Canvas Area */
+        /* MyScript Editor Canvas Area - MOBILE TOUCH FIXES */
         #editor {
             flex-grow: 1;
             width: 100%;
             min-height: 60vh;
-            touch-action: none; 
+            touch-action: none;
+            -ms-touch-action: none;
         }
 
         /* Live KaTeX Render Area */
         .result-bar {
             background-color: #1e293b;
             color: white;
-            padding: 20px;
-            min-height: 80px;
+            padding: 15px;
+            min-height: 100px;
             box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 24px;
+            font-size: 22px;
             z-index: 10;
             text-align: center;
             overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
         }
 
         .result-bar.empty {
@@ -84,8 +91,9 @@
 
         .error-text {
             color: #ef4444 !important;
-            font-size: 16px !important;
+            font-size: 14px !important;
             font-weight: bold;
+            white-space: normal;
         }
     </style>
 </head>
@@ -98,46 +106,42 @@
     </div>
 
     <div class="board-container">
-        <!-- MyScript drawing area -->
+        <!-- touch-action="none" is mandatory for PEP library to work -->
         <div id="editor" touch-action="none"></div>
         
-        <!-- Live Math Render area -->
         <div id="resultBar" class="result-bar empty">
-            Connecting to MyScript Server...
+            Connecting to Server...
         </div>
     </div>
 
     <script>
         const editorElement = document.getElementById('editor');
         const resultBar = document.getElementById('resultBar');
-        
         const undoBtn = document.getElementById('undoBtn');
         const redoBtn = document.getElementById('redoBtn');
         const clearBtn = document.getElementById('clearBtn');
         
         let editor;
 
-        // Hardcoded Keys 
+        // Your exact keys
         const APP_KEY = "f5228783-e117-4ec4-b5b9-a5151daf9b54";
         const HMAC_KEY = "6e5647ca-89f3-4e03-bfe4-4bc12a51b9fc";
 
         window.addEventListener('load', () => {
-            // Delay ensures the DOM is sized before registering the canvas
-            setTimeout(() => {
-                initMyScript(APP_KEY, HMAC_KEY);
-            }, 100);
+            // Initialize immediately on load
+            initMyScript();
         });
 
-        function initMyScript(appKey, hmacKey) {
+        function initMyScript() {
             const configuration = {
                 recognitionParams: {
                     type: 'MATH',
-                    protocol: 'REST', // Changed to REST for maximum GitHub Pages compatibility
+                    protocol: 'WEBSOCKET',
                     server: {
                         scheme: 'https',
-                        host: 'cloud.myscript.com', // Must point to MyScript, NOT GitHub
-                        applicationKey: appKey,
-                        hmacKey: hmacKey
+                        host: 'cloud.myscript.com',
+                        applicationKey: APP_KEY,
+                        hmacKey: HMAC_KEY
                     },
                     iink: {
                         math: {
@@ -147,13 +151,15 @@
                 }
             };
 
+            // Register the editor
             editor = iink.register(editorElement, configuration);
 
-            // Once successfully connected and ready to draw
+            // Hide the connecting message once ready
             editorElement.addEventListener('loaded', () => {
                 resetResultBar();
             });
 
+            // Receive recognized math
             editorElement.addEventListener('exported', (event) => {
                 const exports = event.detail.exports;
                 if (exports && exports['application/x-latex']) {
@@ -163,24 +169,25 @@
                 }
             });
 
+            // Update UI buttons
             editorElement.addEventListener('changed', (event) => {
                 undoBtn.disabled = !event.detail.canUndo;
                 redoBtn.disabled = !event.detail.canRedo;
                 clearBtn.disabled = !event.detail.canClear;
             });
 
-            // Display errors if domain/keys are rejected
+            // Handle API Connection Errors
             editorElement.addEventListener('error', (event) => {
                 console.error("MyScript Error:", event.detail);
                 resultBar.classList.remove('empty');
                 resultBar.classList.add('error-text');
                 
                 let errorMsg = event.detail.message || "Connection failed.";
-                if (errorMsg.includes("Invalid application key") || errorMsg.includes("hmac")) {
-                    errorMsg = "API Key Error. Make sure your GitHub URL is added to the 'Filters' tab in your MyScript Dashboard.";
+                if (errorMsg.includes("application key") || errorMsg.includes("hmac")) {
+                    errorMsg = "API Key Error. Ensure the Domain Filter is set to .* and saved.";
                 }
                 
-                resultBar.innerText = "Error: " + errorMsg;
+                resultBar.innerText = "Connection Error: " + errorMsg;
             });
         }
 
@@ -201,7 +208,7 @@
         function resetResultBar() {
             resultBar.classList.add('empty');
             resultBar.classList.remove('error-text');
-            resultBar.innerText = "Start writing math equations above...";
+            resultBar.innerText = "Draw math here...";
         }
 
         undoBtn.addEventListener('click', () => { if (editor) editor.undo(); });
