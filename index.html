@@ -8,9 +8,9 @@
     <!-- PEP Polyfill for Mobile Touch Support -->
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
 
-    <!-- MyScript iinkJS (Fixed CDN) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iink-js@2.2.0/dist/iink.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/iink-js@2.2.0/dist/iink.min.js"></script>
+    <!-- MyScript iinkJS (Fixed Version: 2.0.2) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iink-js@2.0.2/dist/iink.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/iink-js@2.0.2/dist/iink.min.js"></script>
 
     <!-- KaTeX for Beautiful Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
@@ -103,7 +103,7 @@
     <div class="toolbar">
         <button id="undoBtn" disabled>↶ Undo</button>
         <button id="redoBtn" disabled>↷ Redo</button>
-        <button id="clearBtn" class="danger" disabled>🗑️ Clear Board</button>
+        <button id="clearBtn" class="danger" disabled>🗑️️ Clear Board</button>
     </div>
 
     <div class="board-container">
@@ -122,11 +122,11 @@
         
         let editor;
 
+        // Your exact keys
         const APP_KEY = "f5228783-e117-4ec4-b5b9-a5151daf9b54";
         const HMAC_KEY = "6e5647ca-89f3-4e03-bfe4-4bc12a51b9fc";
 
         window.addEventListener('load', () => {
-            // Wait slightly to ensure external scripts finish parsing on slow mobile connections
             setTimeout(initMyScript, 500);
         });
 
@@ -144,7 +144,7 @@
             const configuration = {
                 recognitionParams: {
                     type: 'MATH',
-                    protocol: 'REST', // Ultra-stable for GitHub pages
+                    protocol: 'REST', 
                     server: {
                         scheme: 'https',
                         host: 'cloud.myscript.com',
