@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smartboard - Live Math Editor</title>
+    <title>Smartboard - Live Math Editor & Solver</title>
 
     <!-- PEP Polyfill for Mobile Touch Support -->
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
@@ -15,6 +15,12 @@
     <!-- KaTeX for Beautiful Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+    <!-- Nerdamer for Math Parsing & Solving -->
+    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Algebra.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Calculus.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Solve.js"></script>
 
     <style>
         body {
@@ -43,9 +49,13 @@
         }
         button:hover { background-color: #f1f5f9; }
         
+        button.action-btn { background-color: #8b5cf6; color: white; border: none; box-shadow: 0 2px 4px rgba(139,92,246,0.3); }
+        button.action-btn:hover { background-color: #7c3aed; }
+
         button.danger { background-color: #ef4444; color: white; border: none; }
         button.danger:hover { background-color: #b91c1c; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
         .board-container {
             position: relative; 
@@ -101,6 +111,7 @@
     <div class="toolbar">
         <button id="undoBtn" disabled>↶ Undo</button>
         <button id="redoBtn" disabled>↷ Redo</button>
+        <button id="solveBtn" class="action-btn" disabled>✨ Solve</button>
         <button id="clearBtn" class="danger" disabled>🗑️ Clear Board</button>
     </div>
 
@@ -116,9 +127,11 @@
         const resultBar = document.getElementById('resultBar');
         const undoBtn = document.getElementById('undoBtn');
         const redoBtn = document.getElementById('redoBtn');
+        const solveBtn = document.getElementById('solveBtn');
         const clearBtn = document.getElementById('clearBtn');
         
         let editor;
+        let currentLatex = ""; // Stores the raw latex string from MyScript
 
         const APP_KEY = "39d74218-ab56-40cd-9534-1dc0692e74ff";
         const HMAC_KEY = "4d4afa9a-3f7d-41c0-bc49-0f5e215ede1a";
@@ -165,7 +178,9 @@
                 editorElement.addEventListener('exported', (event) => {
                     const exports = event.detail.exports;
                     if (exports && exports['application/x-latex'] && typeof exports['application/x-latex'] === 'string') {
-                        renderMath(exports['application/x-latex']);
+                        currentLatex = exports['application/x-latex'];
+                        renderMath(currentLatex);
+                        solveBtn.disabled = false;
                     } else {
                         resetResultBar();
                     }
@@ -175,6 +190,9 @@
                     undoBtn.disabled = !event.detail.canUndo;
                     redoBtn.disabled = !event.detail.canRedo;
                     clearBtn.disabled = !event.detail.canClear;
+                    if(event.detail.isEmpty) {
+                        resetResultBar();
+                    }
                 });
 
                 editorElement.addEventListener('error', (event) => {
@@ -196,6 +214,7 @@
             }
         }
 
+        // --- MATH RENDERER ---
         function renderMath(latexString) {
             resultBar.classList.remove('empty');
             resultBar.classList.remove('error-text');
@@ -211,11 +230,74 @@
         }
 
         function resetResultBar() {
+            currentLatex = "";
+            solveBtn.disabled = true;
             resultBar.classList.add('empty');
             resultBar.classList.remove('error-text');
             resultBar.innerText = "Draw math here...";
         }
 
+        // --- BACKGROUND LATEX PARSER FOR SOLVER ---
+        function parseLatexToNerdamer(latex) {
+            let e = latex;
+            // Remove structural formatting
+            e = e.replace(/\\left/g, '').replace(/\\right/g, '');
+            // Replace basic operators
+            e = e.replace(/\\times/g, '*').replace(/\\div/g, '/').replace(/\\cdot/g, '*');
+            e = e.replace(/\\pi/g, 'pi');
+            // Format square roots and integrals
+            e = e.replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)');
+            e = e.replace(/\\int\s*(.*?)\s*d([a-zA-Z])/g, 'integrate($1, $2)');
+            // Iteratively format fractions \frac{a}{b} -> (a)/(b)
+            while(e.includes('\\frac')) {
+                e = e.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)');
+            }
+            // Strip remaining structural brackets
+            e = e.replace(/\\/g, ''); 
+            e = e.replace(/\{/g, '(').replace(/\}/g, ')');
+            return e;
+        }
+
+        // --- SOLVE LOGIC ---
+        solveBtn.addEventListener('click', () => {
+            if (!currentLatex) return;
+            solveBtn.innerText = "⏳...";
+            
+            try {
+                const parsedExpr = parseLatexToNerdamer(currentLatex);
+                let solutionTeX = "";
+
+                if (parsedExpr.includes('=')) {
+                    // It's an equation to solve for a variable
+                    const parts = parsedExpr.split('=');
+                    const equation = `${parts[0].trim()} - (${parts[1].trim()})`;
+                    const variables = nerdamer(equation).variables();
+                    
+                    if (variables.length > 0) {
+                        const sol = nerdamer.solve(equation, variables[0]);
+                        solutionTeX = `${variables[0]} = ${sol.toTeX()}`;
+                    } else {
+                        // Equality check evaluation
+                        solutionTeX = nerdamer(parsedExpr).evaluate().toTeX();
+                    }
+                } else {
+                    // Standard evaluation / calculus
+                    solutionTeX = nerdamer(parsedExpr).evaluate().toTeX();
+                }
+
+                // Append the solution to the existing UI
+                const finalOutput = `${currentLatex} \\Rightarrow ${solutionTeX}`;
+                renderMath(finalOutput);
+                
+            } catch (err) {
+                console.error("Math Solver Error:", err);
+                alert("The Math Solver couldn't parse this specific formatting. Try simplifying the handwriting.");
+            } finally {
+                solveBtn.innerText = "✨ Solve";
+            }
+        });
+
+        // --- EVENT LISTENERS ---
         undoBtn.addEventListener('click', () => { if (editor) editor.undo(); });
         redoBtn.addEventListener('click', () => { if (editor) editor.redo(); });
         clearBtn.addEventListener('click', () => {
@@ -230,5 +312,4 @@
         });
     </script>
 </body>
-    
 </html>
