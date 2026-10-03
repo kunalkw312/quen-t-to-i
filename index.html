@@ -8,7 +8,7 @@
     <!-- PEP Polyfill for Mobile Touch Support -->
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
 
-    <!-- MyScript iinkJS (Fixed Version: 2.0.2) -->
+    <!-- MyScript iinkJS (Stable Version 2.0.2) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iink-js@2.0.2/dist/iink.min.css">
     <script src="https://cdn.jsdelivr.net/npm/iink-js@2.0.2/dist/iink.min.js"></script>
 
@@ -103,7 +103,7 @@
     <div class="toolbar">
         <button id="undoBtn" disabled>↶ Undo</button>
         <button id="redoBtn" disabled>↷ Redo</button>
-        <button id="clearBtn" class="danger" disabled>🗑️️ Clear Board</button>
+        <button id="clearBtn" class="danger" disabled>🗑️ Clear Board</button>
     </div>
 
     <div class="board-container">
@@ -131,7 +131,6 @@
         });
 
         function initMyScript() {
-            // Safely grab the library whether it loaded as "iink" or "MyScript"
             const iinkAPI = window.iink || window.MyScript;
             
             if (!iinkAPI) {
@@ -144,7 +143,7 @@
             const configuration = {
                 recognitionParams: {
                     type: 'MATH',
-                    protocol: 'REST', 
+                    protocol: 'WEBSOCKET', // Switched back to WebSocket to fix the POINTER_UP crash
                     server: {
                         scheme: 'https',
                         host: 'cloud.myscript.com',
@@ -169,7 +168,8 @@
 
                 editorElement.addEventListener('exported', (event) => {
                     const exports = event.detail.exports;
-                    if (exports && exports['application/x-latex']) {
+                    // Safety check added here to prevent KaTeX crash
+                    if (exports && exports['application/x-latex'] && typeof exports['application/x-latex'] === 'string') {
                         renderMath(exports['application/x-latex']);
                     } else {
                         resetResultBar();
