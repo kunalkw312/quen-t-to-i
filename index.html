@@ -247,23 +247,26 @@
             e = e.replace(/\\pi/g, 'pi').replace(/\\infty/g, 'infinity');
             e = e.replace(/\\ln/g, 'log'); // Nerdamer uses log(x) for natural logarithm
 
-            // 3. Calculus: Definite Integrals (\int_{a}^{b} f(x) dx)
-            e = e.replace(/\\int_\{([^}]+)\}\^\{([^}]+)\}\s*(.*?)\s*d([a-zA-Z])/g, 'defint($3, $1, $2, $4)');                          // 4. Calculus: Indefinite Integrals (\int f(x) dx)             e = e.replace(/\\int\s*(.*?)\s*d([a-zA-Z])/g, 'integrate($1, $2)');
+            // 3. Calculus: Definite Integrals
+            e = e.replace(/\\int_\{([^}]+)\}\^\{([^}]+)\}\s*(.*?)\s*d([a-zA-Z])/g, 'defint($3, $1, $2, $4)');
+            
+            // 4. Calculus: Indefinite Integrals
+            e = e.replace(/\\int\s*(.*?)\s*d([a-zA-Z])/g, 'integrate($1, $2)');
 
-            // 5. Calculus: Limits (\lim_{x \to a} f(x))
+            // 5. Calculus: Limits
             e = e.replace(/\\lim_\{([a-zA-Z])\\to([^}]+)\}(.*)/g, 'limit($3, $1, $2)');
 
-            // 6. Calculus: Derivatives (\frac{d}{dx} f(x))
+            // 6. Calculus: Derivatives
             e = e.replace(/\\frac\{d\}\{d([a-zA-Z])\}(.*)/g, 'diff($2, $1)');
 
-            // 7. Series: Summations (\sum_{i=1}^{n} f(i))
+            // 7. Series: Summations
             e = e.replace(/\\sum_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}(.*)/g, 'sum($4, $1, $2, $3)');
 
             // 8. Roots
-            e = e.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, 'nthRoot($2, $1)'); // Cube roots, etc.
-            e = e.replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)'); // Square roots
+            e = e.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, 'nthRoot($2, $1)'); 
+            e = e.replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)'); 
 
-            // 9. Nested Fractions (\frac{a}{b} -> (a)/(b))
+            // 9. Nested Fractions
             let prevE;
             do {
                 prevE = e;
@@ -277,6 +280,18 @@
             return e;
         }
 
+        // --- POST-PROCESSOR: Fixes Nerdamer's plain-text output back into LaTeX symbols ---
+        function formatSolutionTeX(tex) {
+            let e = tex;
+            // Catch raw function names and replace them with LaTeX formatting
+            e = e.replace(/integrate/g, '\\int ');
+            e = e.replace(/\bint\b/g, '\\int ');
+            e = e.replace(/defint/g, '\\int ');
+            e = e.replace(/\blimit\b/g, '\\lim ');
+            e = e.replace(/log/g, '\\ln '); // Re-convert log back to ln for display
+            return e;
+        }
+
         // --- SOLVER LOGIC ---
         solveBtn.addEventListener('click', () => {
             if (!currentLatex) return;
@@ -287,7 +302,7 @@
                 let solutionTeX = "";
 
                 if (parsedExpr.includes('=')) {
-                    // Equation Solver (e.g. 2x + 4 = 10)
+                    // Equation Solver
                     const parts = parsedExpr.split('=');
                     const equation = `${parts[0].trim()} - (${parts[1].trim()})`;
                     const variables = nerdamer(equation).variables();
@@ -296,7 +311,6 @@
                         const sol = nerdamer.solve(equation, variables[0]);
                         solutionTeX = `${variables[0]} = ${sol.toTeX()}`;
                     } else {
-                        // Equality check (e.g. 5 + 5 = 10)
                         solutionTeX = nerdamer(parsedExpr).evaluate().toTeX();
                     }
                 } else {
@@ -304,7 +318,10 @@
                     solutionTeX = nerdamer(parsedExpr).evaluate().toTeX();
                 }
 
-                // Render result
+                // Apply the cleanup filter to the solution
+                solutionTeX = formatSolutionTeX(solutionTeX);
+
+                // Render final result
                 const finalOutput = `${currentLatex} \\Rightarrow ${solutionTeX}`;
                 renderMath(finalOutput);
                 
