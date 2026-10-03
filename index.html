@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smartboard - Live Math Editor & Solver</title>
+    <title>Smartboard - Advanced Calculus & Math Editor</title>
 
     <!-- PEP Polyfill for Mobile Touch Support -->
     <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
@@ -16,11 +16,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
 
-    <!-- Nerdamer for Math Parsing & Solving -->
+    <!-- Nerdamer for Advanced Calculus & Math Solving -->
     <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Algebra.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Calculus.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Solve.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Extra.js"></script>
 
     <style>
         body {
@@ -84,7 +85,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 22px;
+            font-size: 24px;
             z-index: 10;
             text-align: center;
             overflow-x: auto;
@@ -111,8 +112,8 @@
     <div class="toolbar">
         <button id="undoBtn" disabled>↶ Undo</button>
         <button id="redoBtn" disabled>↷ Redo</button>
-        <button id="solveBtn" class="action-btn" disabled>✨ Solve</button>
-        <button id="clearBtn" class="danger" disabled>🗑️ Clear Board</button>
+        <button id="solveBtn" class="action-btn" disabled>✨ Solve Math</button>
+        <button id="clearBtn" class="danger" disabled>🗑️ Clear</button>
     </div>
 
     <div class="board-container">
@@ -131,7 +132,7 @@
         const clearBtn = document.getElementById('clearBtn');
         
         let editor;
-        let currentLatex = ""; // Stores the raw latex string from MyScript
+        let currentLatex = "";
 
         const APP_KEY = "39d74218-ab56-40cd-9534-1dc0692e74ff";
         const HMAC_KEY = "4d4afa9a-3f7d-41c0-bc49-0f5e215ede1a";
@@ -146,7 +147,7 @@
             if (!iinkAPI) {
                 resultBar.classList.remove('empty');
                 resultBar.classList.add('error-text');
-                resultBar.innerText = "Library blocked. Try turning off your ad-blocker or using a different browser.";
+                resultBar.innerText = "Library blocked. Try turning off your ad-blocker.";
                 return;
             }
 
@@ -199,13 +200,7 @@
                     console.error("MyScript Error:", event.detail);
                     resultBar.classList.remove('empty');
                     resultBar.classList.add('error-text');
-                    
-                    let errorMsg = event.detail.message || "Connection failed.";
-                    if (errorMsg.includes("application key") || errorMsg.includes("hmac")) {
-                        errorMsg = "API Key Error. Ensure the Domain Filter is set to .* and saved in MyScript Dashboard.";
-                    }
-                    
-                    resultBar.innerText = "Connection Error: " + errorMsg;
+                    resultBar.innerText = "Connection Error: " + (event.detail.message || "Failed");
                 });
             } catch (err) {
                 resultBar.classList.remove('empty');
@@ -234,31 +229,55 @@
             solveBtn.disabled = true;
             resultBar.classList.add('empty');
             resultBar.classList.remove('error-text');
-            resultBar.innerText = "Draw math here...";
+            resultBar.innerText = "Draw math, calculus, or equations here...";
         }
 
-        // --- BACKGROUND LATEX PARSER FOR SOLVER ---
+        // --- ADVANCED CALCULUS & ALGEBRA PARSER ---
         function parseLatexToNerdamer(latex) {
             let e = latex;
-            // Remove structural formatting
+            
+            // 1. Clean formatting and spacing
             e = e.replace(/\\left/g, '').replace(/\\right/g, '');
-            // Replace basic operators
+            e = e.replace(/\\mathrm\{([a-zA-Z])\}/g, '$1'); 
+            e = e.replace(/\\text\{([a-zA-Z]+)\}/g, '$1');
+            e = e.replace(/\s+/g, '');
+            
+            // 2. Constants & Operators
             e = e.replace(/\\times/g, '*').replace(/\\div/g, '/').replace(/\\cdot/g, '*');
-            e = e.replace(/\\pi/g, 'pi');
-            // Format square roots and integrals
-            e = e.replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)');
-            e = e.replace(/\\int\s*(.*?)\s*d([a-zA-Z])/g, 'integrate($1, $2)');
-            // Iteratively format fractions \frac{a}{b} -> (a)/(b)
-            while(e.includes('\\frac')) {
-                e = e.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)');
-            }
-            // Strip remaining structural brackets
+            e = e.replace(/\\pi/g, 'pi').replace(/\\infty/g, 'infinity');
+            e = e.replace(/\\ln/g, 'log'); // Nerdamer uses log(x) for natural logarithm
+
+            // 3. Calculus: Definite Integrals (\int_{a}^{b} f(x) dx)
+            e = e.replace(/\\int_\{([^}]+)\}\^\{([^}]+)\}\s*(.*?)\s*d([a-zA-Z])/g, 'defint($3, $1, $2, $4)');                          // 4. Calculus: Indefinite Integrals (\int f(x) dx)             e = e.replace(/\\int\s*(.*?)\s*d([a-zA-Z])/g, 'integrate($1, $2)');
+
+            // 5. Calculus: Limits (\lim_{x \to a} f(x))
+            e = e.replace(/\\lim_\{([a-zA-Z])\\to([^}]+)\}(.*)/g, 'limit($3, $1, $2)');
+
+            // 6. Calculus: Derivatives (\frac{d}{dx} f(x))
+            e = e.replace(/\\frac\{d\}\{d([a-zA-Z])\}(.*)/g, 'diff($2, $1)');
+
+            // 7. Series: Summations (\sum_{i=1}^{n} f(i))
+            e = e.replace(/\\sum_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}(.*)/g, 'sum($4, $1, $2, $3)');
+
+            // 8. Roots
+            e = e.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, 'nthRoot($2, $1)'); // Cube roots, etc.
+            e = e.replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)'); // Square roots
+
+            // 9. Nested Fractions (\frac{a}{b} -> (a)/(b))
+            let prevE;
+            do {
+                prevE = e;
+                e = e.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '(($1)/($2))');
+            } while (e !== prevE);
+
+            // 10. Strip remaining structural LaTeX commands
             e = e.replace(/\\/g, ''); 
             e = e.replace(/\{/g, '(').replace(/\}/g, ')');
+            
             return e;
         }
 
-        // --- SOLVE LOGIC ---
+        // --- SOLVER LOGIC ---
         solveBtn.addEventListener('click', () => {
             if (!currentLatex) return;
             solveBtn.innerText = "⏳...";
@@ -268,7 +287,7 @@
                 let solutionTeX = "";
 
                 if (parsedExpr.includes('=')) {
-                    // It's an equation to solve for a variable
+                    // Equation Solver (e.g. 2x + 4 = 10)
                     const parts = parsedExpr.split('=');
                     const equation = `${parts[0].trim()} - (${parts[1].trim()})`;
                     const variables = nerdamer(equation).variables();
@@ -277,23 +296,23 @@
                         const sol = nerdamer.solve(equation, variables[0]);
                         solutionTeX = `${variables[0]} = ${sol.toTeX()}`;
                     } else {
-                        // Equality check evaluation
+                        // Equality check (e.g. 5 + 5 = 10)
                         solutionTeX = nerdamer(parsedExpr).evaluate().toTeX();
                     }
                 } else {
-                    // Standard evaluation / calculus
+                    // Evaluate Integrals, Limits, Derivatives, and Arithmetic
                     solutionTeX = nerdamer(parsedExpr).evaluate().toTeX();
                 }
 
-                // Append the solution to the existing UI
+                // Render result
                 const finalOutput = `${currentLatex} \\Rightarrow ${solutionTeX}`;
                 renderMath(finalOutput);
                 
             } catch (err) {
                 console.error("Math Solver Error:", err);
-                alert("The Math Solver couldn't parse this specific formatting. Try simplifying the handwriting.");
+                alert("The solver could not evaluate this expression. Ensure your handwriting clearly represents a valid mathematical or calculus operation.");
             } finally {
-                solveBtn.innerText = "✨ Solve";
+                solveBtn.innerText = "✨ Solve Math";
             }
         });
 
