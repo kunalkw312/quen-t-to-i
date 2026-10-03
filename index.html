@@ -23,7 +23,7 @@
             background-color: #eef2f5;
             display: flex; flex-direction: column;
             height: 100vh; overflow: hidden;
-            overscroll-behavior-y: none; /* Prevents pull-to-refresh on mobile */
+            overscroll-behavior-y: none;
         }
 
         .toolbar {
@@ -56,7 +56,6 @@
             flex-direction: column;
         }
 
-        /* MyScript Editor Canvas Area */
         #editor {
             position: relative;
             flex-grow: 1;
@@ -66,7 +65,6 @@
             -ms-touch-action: none;
         }
 
-        /* Live KaTeX Render Area */
         .result-bar {
             background-color: #1e293b;
             color: white;
@@ -122,9 +120,8 @@
         
         let editor;
 
-        // Your exact keys
-        const APP_KEY = "f5228783-e117-4ec4-b5b9-a5151daf9b54";
-        const HMAC_KEY = "6e5647ca-89f3-4e03-bfe4-4bc12a51b9fc";
+        const APP_KEY = "39d74218-ab56-40cd-9534-1dc0692e74ff";
+        const HMAC_KEY = "4d4afa9a-3f7d-41c0-bc49-0f5e215ede1a";
 
         window.addEventListener('load', () => {
             setTimeout(initMyScript, 500);
@@ -143,7 +140,7 @@
             const configuration = {
                 recognitionParams: {
                     type: 'MATH',
-                    protocol: 'WEBSOCKET', // Switched back to WebSocket to fix the POINTER_UP crash
+                    protocol: 'WEBSOCKET',
                     server: {
                         scheme: 'https',
                         host: 'cloud.myscript.com',
@@ -159,7 +156,6 @@
             };
 
             try {
-                // Register the editor
                 editor = iinkAPI.register(editorElement, configuration);
 
                 editorElement.addEventListener('loaded', () => {
@@ -168,7 +164,6 @@
 
                 editorElement.addEventListener('exported', (event) => {
                     const exports = event.detail.exports;
-                    // Safety check added here to prevent KaTeX crash
                     if (exports && exports['application/x-latex'] && typeof exports['application/x-latex'] === 'string') {
                         renderMath(exports['application/x-latex']);
                     } else {
