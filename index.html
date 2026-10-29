@@ -3,349 +3,404 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smartboard - Advanced Calculus & Math Editor</title>
-
-    <!-- PEP Polyfill for Mobile Touch Support -->
-    <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
-
-    <!-- MyScript iinkJS (Stable Version 2.0.2) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/iink-js@2.0.2/dist/iink.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/iink-js@2.0.2/dist/iink.min.js"></script>
-
-    <!-- KaTeX for Beautiful Math Rendering -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-
-    <!-- Nerdamer for Advanced Calculus & Math Solving -->
-    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Algebra.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Calculus.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Solve.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Extra.js"></script>
-
+    <title>AI Junta - Local Test Sandbox</title>
+    <!-- Tailwind for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        // Custom Tailwind config to match your LMS theme
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandOrange: '#f7941d',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
+        :root {
+            --input-bg: #11162a;
+            --border-color: #354064;
+            --text-main: #f8f9ff;
+        }
         body {
-            margin: 0; padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #eef2f5;
-            display: flex; flex-direction: column;
-            height: 100vh; overflow: hidden;
-            overscroll-behavior-y: none;
+            background-color: #080b18;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
         }
-
-        .toolbar {
-            background-color: #ffffff;
-            padding: 12px 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex; gap: 10px;
-            align-items: center; justify-content: center;
-            flex-wrap: wrap; z-index: 10;
-        }
-
-        button {
-            padding: 8px 12px; font-size: 14px;
-            border-radius: 6px; border: 1px solid #ccc;
-            cursor: pointer; outline: none; background: #fff;
-            transition: 0.2s; font-weight: 600; color: #333;
-        }
-        button:hover { background-color: #f1f5f9; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        button.action-btn { background-color: #8b5cf6; color: white; border: none; box-shadow: 0 2px 4px rgba(139,92,246,0.3); }
-        button.action-btn:hover { background-color: #7c3aed; }
-
-        button.danger { background-color: #ef4444; color: white; border: none; }
-        button.danger:hover { background-color: #b91c1c; }
-        
-        button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
-
-        .board-container {
-            position: relative; 
-            flex-grow: 1;
-            width: 100%; 
-            background-color: #ffffff;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #editor {
-            position: relative;
-            flex-grow: 1;
-            width: 100%;
-            min-height: 60vh;
-            touch-action: none;
-            -ms-touch-action: none;
-        }
-
-        .result-bar {
-            background-color: #1e293b;
-            color: white;
-            padding: 15px;
-            min-height: 100px;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            z-index: 10;
-            text-align: center;
-            overflow-x: auto;
-            overflow-y: hidden;
-            white-space: nowrap;
-        }
-
-        .result-bar.empty {
-            color: #94a3b8;
-            font-size: 16px;
-            font-style: italic;
-        }
-
-        .error-text {
-            color: #ef4444 !important;
-            font-size: 14px !important;
-            font-weight: bold;
-            white-space: normal;
-        }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #354064; border-radius: 10px; }
     </style>
 </head>
-<body>
+<body class="flex items-center justify-center h-screen p-4">
 
-    <div class="toolbar">
-        <button id="undoBtn" disabled>↶ Undo</button>
-        <button id="redoBtn" disabled>↷ Redo</button>
-        <button id="solveBtn" class="action-btn" disabled>✨ Solve Math</button>
-        <button id="clearBtn" class="danger" disabled>🗑️ Clear</button>
-    </div>
+    <!-- MAIN CHAT CONTAINER -->
+    <div class="w-full max-w-2xl bg-[#0c1022] border border-[var(--border-color)] rounded-2xl flex flex-col h-[90vh] shadow-2xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-brandOrange/10 border-b border-brandOrange/20 p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-brandOrange flex items-center justify-center text-white text-xl">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <div>
+                <h2 class="font-black italic text-brandOrange text-lg leading-tight">AI Junta</h2>
+                <p class="text-[10px] uppercase tracking-widest opacity-60 font-bold"><i class="fa-solid fa-circle text-green-500 mr-1 animate-pulse"></i> connected to VPS</p>
+            </div>
+        </div>
 
-    <div class="board-container">
-        <div id="editor" touch-action="none"></div>
-        <div id="resultBar" class="result-bar empty">
-            Initializing Engine...
+        <!-- Chat Messages Area -->
+        <div id="ai-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <div class="bg-[var(--input-bg)] border border-[var(--border-color)] p-3 rounded-2xl rounded-tl-sm max-w-[85%] fade-in">
+                <p class="text-sm">Hello! I am AI Junta, streaming live from your Hostinger VPS. My voice is powered by VoiceStudio. How can I help you today?</p>
+            </div>
+        </div>
+
+        <!-- Visualizer Area -->
+        <div class="px-4">
+            <div id="ai-voice-visualizer-container" class="hidden w-full h-12 bg-black rounded-xl flex items-center justify-center border border-brandOrange/30 shadow-[0_0_15px_rgba(247,148,29,0.2)]">
+                <canvas id="ai-voice-canvas" class="w-full h-full rounded-xl"></canvas>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 bg-[#080b18] border-t border-[var(--border-color)]">
+            <div class="flex items-center gap-2">
+                
+                <!-- File Input (Hidden) & Label -->
+                <input type="file" id="ai-media-file" class="hidden" accept="image/*, .pdf, .doc, .docx, .txt">
+                <label for="ai-media-file" class="w-10 h-10 shrink-0 rounded-xl bg-[var(--input-bg)] text-[var(--text-main)] border border-[var(--border-color)] flex items-center justify-center hover:bg-brandOrange hover:text-white transition cursor-pointer">
+                    <i class="fa-solid fa-paperclip"></i>
+                </label>
+
+                <!-- Mute TTS -->
+                <button id="ai-tts-toggle-btn" onclick="toggleAITTS()" class="w-10 h-10 shrink-0 rounded-xl bg-[var(--input-bg)] text-[var(--text-main)] border border-[var(--border-color)] flex items-center justify-center hover:bg-brandOrange hover:text-white transition shadow-sm" title="Mute AI Voice">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+
+                <!-- Text Input -->
+                <input type="text" id="ai-input" placeholder="Ask AI Junta anything..." 
+                       class="flex-1 h-10 bg-black border border-[var(--border-color)] rounded-xl px-4 text-sm outline-none focus:border-brandOrange transition-colors"
+                       onkeydown="if(event.key==='Enter') sendAIMessage()">
+
+                <!-- Voice / STT Buttons -->
+                <button id="ai-mic-btn" onclick="startAIVoice()" class="w-10 h-10 shrink-0 rounded-xl bg-brandOrange/10 text-brandOrange border border-brandOrange/20 flex items-center justify-center hover:bg-brandOrange hover:text-white transition shadow-sm" title="Start Dictation">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+                <button id="ai-stop-btn" onclick="stopAIVoice()" class="hidden w-10 h-10 shrink-0 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 flex items-center justify-center hover:bg-red-500 hover:text-white transition shadow-sm" title="Stop Dictation">
+                    <i class="fa-solid fa-square text-xs animate-pulse"></i>
+                </button>
+
+                <!-- Send Button -->
+                <button onclick="sendAIMessage()" class="w-10 h-10 shrink-0 rounded-xl bg-brandOrange text-white flex items-center justify-center hover:bg-[#e0861a] transition shadow-lg">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+
+            </div>
+            <!-- File Preview Area -->
+            <div id="ai-file-preview" class="hidden text-[10px] text-brandOrange mt-2 font-bold"><i class="fa-solid fa-file mr-1"></i> File attached</div>
         </div>
     </div>
 
+
+    <!-- JAVASCRIPT LOGIC -->
     <script>
-        const editorElement = document.getElementById('editor');
-        const resultBar = document.getElementById('resultBar');
-        const undoBtn = document.getElementById('undoBtn');
-        const redoBtn = document.getElementById('redoBtn');
-        const solveBtn = document.getElementById('solveBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        
-        let editor;
-        let currentLatex = "";
+        // MOCK CONFIGURATION FOR STANDALONE TEST
+        const customAiConfig = { apiUrl: 'https://openclase.com/api/ai-junta' };
+        window.profile = { name: "Test Developer", role: "super_admin", instituteId: "INST-TEST" };
+        window.currentNavTab = "test_sandbox";
+        window.toast = (msg) => console.log("TOAST:", msg); // Simple console log for errors
 
-        const APP_KEY = "39d74218-ab56-40cd-9534-1dc0692e74ff";
-        const HMAC_KEY = "4d4afa9a-3f7d-41c0-bc49-0f5e215ede1a";
-
-        window.addEventListener('load', () => {
-            setTimeout(initMyScript, 500);
+        // File upload UI logic
+        document.getElementById('ai-media-file').addEventListener('change', function(e) {
+            const preview = document.getElementById('ai-file-preview');
+            if(this.files[0]) {
+                preview.innerHTML = `<i class="fa-solid fa-file mr-1"></i> ${this.files[0].name}`;
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
         });
 
-        function initMyScript() {
-            const iinkAPI = window.iink || window.MyScript;
-            
-            if (!iinkAPI) {
-                resultBar.classList.remove('empty');
-                resultBar.classList.add('error-text');
-                resultBar.innerText = "Library blocked. Try turning off your ad-blocker.";
-                return;
-            }
+        // ============================================================
+        // AI CHAT & VOICESTUDIO PIPELINE
+        // ============================================================
+        window._aiVoiceSocket = null;
+        window._aiMediaRecorder = null;
+        window._aiAudioContext = null;
+        window._aiAnalyser = null;
+        window._aiVoiceQueue = [];
+        window._aiIsPlaying = false;
+        window._aiTtsMuted = false;
+        window._activeAIAudioSource = null;
+        window._aiChatHistory = [];
 
-            const configuration = {
-                recognitionParams: {
-                    type: 'MATH',
-                    protocol: 'WEBSOCKET',
-                    server: {
-                        scheme: 'https',
-                        host: 'cloud.myscript.com',
-                        applicationKey: APP_KEY,
-                        hmacKey: HMAC_KEY
-                    },
-                    iink: {
-                        math: {
-                            mimeTypes: ['application/x-latex']
+        async function playNextAIAudio() {
+            if (window._aiTtsMuted || window._aiIsPlaying || window._aiVoiceQueue.length === 0) return;
+            window._aiIsPlaying = true;
+            
+            try {
+                const audioData = window._aiVoiceQueue.shift();
+                if (!window._aiAudioContext) {
+                    window._aiAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (window._aiAudioContext.state === 'suspended') await window._aiAudioContext.resume();
+                
+                const audioBuffer = await window._aiAudioContext.decodeAudioData(audioData);
+                window._activeAIAudioSource = window._aiAudioContext.createBufferSource();
+                window._activeAIAudioSource.buffer = audioBuffer;
+                window._activeAIAudioSource.connect(window._aiAudioContext.destination);
+                
+                window._activeAIAudioSource.onended = () => {
+                    window._aiIsPlaying = false;
+                    playNextAIAudio(); 
+                };
+                window._activeAIAudioSource.start(0);
+            } catch(e) {
+                window._aiIsPlaying = false;
+                playNextAIAudio();
+            }
+        }
+
+        async function sendAIMessage() {
+            const input = document.getElementById('ai-input');
+            const fileInput = document.getElementById('ai-media-file');
+            const preview = document.getElementById('ai-file-preview');
+
+            const text = input.value.trim();
+            const file = fileInput?.files[0];
+            if (!text && !file) return;
+
+            if (window._aiSpeechRec) stopAIVoice();
+            stopAITTS();
+
+            const messagesDiv = document.getElementById('ai-messages');
+
+            messagesDiv.innerHTML += `
+                <div class="bg-brandOrange/20 text-white p-3 rounded-2xl rounded-tr-sm max-w-[85%] ml-auto mb-2 fade-in">
+                    ${file ? `<p class="text-[10px] text-brandOrange font-bold mb-1"><i class="fa-solid fa-paperclip mr-1"></i>${file.name}</p>` : ''}
+                    <p class="text-sm">${text || 'Analyze attached file'}</p>
+                </div>`;
+            
+            window._aiChatHistory.push({ role: 'user', content: text || 'Analyzed an uploaded file/image.' });
+            
+            input.value = '';
+            if (fileInput) fileInput.value = '';
+            if (preview) { preview.innerText = ''; preview.classList.add('hidden'); }
+
+            const streamId = 'ai-stream-' + Date.now();
+            messagesDiv.innerHTML += `
+                <div class="bg-[var(--input-bg)] border border-[var(--border-color)] p-3 rounded-2xl rounded-tl-sm max-w-[85%] mb-2 fade-in">
+                    <div id="${streamId}" class="text-sm leading-relaxed"><span class="text-xs opacity-50"><i class="fa-solid fa-spinner fa-spin"></i> Thinking...</span></div>
+                </div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            try {
+                const formData = new FormData();
+                formData.append('message', text);
+                formData.append('user', window.profile?.name || '');
+                formData.append('role', window.profile?.role || 'student');
+                formData.append('history', JSON.stringify(window._aiChatHistory)); 
+                if (file) formData.append('file', file);
+
+                const response = await fetch(customAiConfig.apiUrl, { method: 'POST', body: formData });
+                if (!response.ok) throw new Error('AI request failed');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                
+                let fullText = "";
+                let buffer = "";
+                let sentenceBuffer = "";
+                const targetDiv = document.getElementById(streamId);
+                targetDiv.innerHTML = ""; 
+
+                if (!window._aiVoiceSocket || window._aiVoiceSocket.readyState !== WebSocket.OPEN) {
+                    // Hardcoded securely to your VPS
+                    window._aiVoiceSocket = new WebSocket(`wss://openclase.com/ai-voice`);
+                    window._aiVoiceSocket.binaryType = 'arraybuffer';
+                    window._aiVoiceSocket.onmessage = async (e) => {
+                        if (e.data instanceof ArrayBuffer && !window._aiTtsMuted) {
+                            window._aiVoiceQueue.push(e.data);
+                            playNextAIAudio();
+                        }
+                    };
+                }
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    let boundary = buffer.indexOf('\n');
+                    
+                    while (boundary !== -1) {
+                        let line = buffer.slice(0, boundary).trim();
+                        buffer = buffer.slice(boundary + 1);
+                        boundary = buffer.indexOf('\n');
+
+                        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                            try {
+                                const parsed = JSON.parse(line.slice(6));
+                                const token = parsed.choices[0]?.delta?.content || '';
+                                if (token) {
+                                    fullText += token;
+                                    targetDiv.innerHTML = fullText.replace(/\n/g, '<br>');
+                                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                                    if (!window._aiTtsMuted) {
+                                        sentenceBuffer += token;
+                                        if (/[.!?]\s/.test(token) || /[.!?]\n/.test(token)) {
+                                            if (window._aiVoiceSocket.readyState === WebSocket.OPEN) {
+                                                window._aiVoiceSocket.send(JSON.stringify({ action: 'synthesize_text', text: sentenceBuffer }));
+                                            }
+                                            sentenceBuffer = "";
+                                        }
+                                    }
+                                }
+                            } catch (e) {}
                         }
                     }
                 }
-            };
-
-            try {
-                editor = iinkAPI.register(editorElement, configuration);
-
-                editorElement.addEventListener('loaded', () => {
-                    resetResultBar();
-                });
-
-                editorElement.addEventListener('exported', (event) => {
-                    const exports = event.detail.exports;
-                    if (exports && exports['application/x-latex'] && typeof exports['application/x-latex'] === 'string') {
-                        currentLatex = exports['application/x-latex'];
-                        renderMath(currentLatex);
-                        solveBtn.disabled = false;
-                    } else {
-                        resetResultBar();
-                    }
-                });
-
-                editorElement.addEventListener('changed', (event) => {
-                    undoBtn.disabled = !event.detail.canUndo;
-                    redoBtn.disabled = !event.detail.canRedo;
-                    clearBtn.disabled = !event.detail.canClear;
-                    if(event.detail.isEmpty) {
-                        resetResultBar();
-                    }
-                });
-
-                editorElement.addEventListener('error', (event) => {
-                    console.error("MyScript Error:", event.detail);
-                    resultBar.classList.remove('empty');
-                    resultBar.classList.add('error-text');
-                    resultBar.innerText = "Connection Error: " + (event.detail.message || "Failed");
-                });
-            } catch (err) {
-                resultBar.classList.remove('empty');
-                resultBar.classList.add('error-text');
-                resultBar.innerText = "Setup Error: " + err.message;
-            }
-        }
-
-        // --- MATH RENDERER ---
-        function renderMath(latexString) {
-            resultBar.classList.remove('empty');
-            resultBar.classList.remove('error-text');
-            try {
-                katex.render(latexString, resultBar, {
-                    displayMode: true,
-                    throwOnError: false
-                });
-            } catch (err) {
-                console.error("KaTeX Error:", err);
-                resultBar.innerText = "Formatting error...";
-            }
-        }
-
-        function resetResultBar() {
-            currentLatex = "";
-            solveBtn.disabled = true;
-            resultBar.classList.add('empty');
-            resultBar.classList.remove('error-text');
-            resultBar.innerText = "Draw math, calculus, or equations here...";
-        }
-
-        // --- ADVANCED CALCULUS & ALGEBRA PARSER ---
-        function parseLatexToNerdamer(latex) {
-            let e = latex;
-            
-            // 1. Clean formatting and spacing
-            e = e.replace(/\\left/g, '').replace(/\\right/g, '');
-            e = e.replace(/\\mathrm\{([a-zA-Z])\}/g, '$1'); 
-            e = e.replace(/\\text\{([a-zA-Z]+)\}/g, '$1');
-            e = e.replace(/\s+/g, '');
-            
-            // 2. Constants & Operators
-            e = e.replace(/\\times/g, '*').replace(/\\div/g, '/').replace(/\\cdot/g, '*');
-            e = e.replace(/\\pi/g, 'pi').replace(/\\infty/g, 'infinity');
-            e = e.replace(/\\ln/g, 'log'); // Nerdamer uses log(x) for natural logarithm
-
-            // 3. Calculus: Definite Integrals
-            e = e.replace(/\\int_\{([^}]+)\}\^\{([^}]+)\}\s*(.*?)\s*d([a-zA-Z])/g, 'defint($3, $1, $2, $4)');
-            
-            // 4. Calculus: Indefinite Integrals
-            e = e.replace(/\\int\s*(.*?)\s*d([a-zA-Z])/g, 'integrate($1, $2)');
-
-            // 5. Calculus: Limits
-            e = e.replace(/\\lim_\{([a-zA-Z])\\to([^}]+)\}(.*)/g, 'limit($3, $1, $2)');
-
-            // 6. Calculus: Derivatives
-            e = e.replace(/\\frac\{d\}\{d([a-zA-Z])\}(.*)/g, 'diff($2, $1)');
-
-            // 7. Series: Summations
-            e = e.replace(/\\sum_\{([a-zA-Z])=([^}]+)\}\^\{([^}]+)\}(.*)/g, 'sum($4, $1, $2, $3)');
-
-            // 8. Roots
-            e = e.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, 'nthRoot($2, $1)'); 
-            e = e.replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)'); 
-
-            // 9. Nested Fractions
-            let prevE;
-            do {
-                prevE = e;
-                e = e.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '(($1)/($2))');
-            } while (e !== prevE);
-
-            // 10. Strip remaining structural LaTeX commands
-            e = e.replace(/\\/g, ''); 
-            e = e.replace(/\{/g, '(').replace(/\}/g, ')');
-            
-            return e;
-        }
-
-        // --- POST-PROCESSOR: Fixes Nerdamer's plain-text output back into LaTeX symbols ---
-        function formatSolutionTeX(tex) {
-            let e = tex;
-            // Catch raw function names and replace them with LaTeX formatting
-            e = e.replace(/integrate/g, '\\int ');
-            e = e.replace(/\bint\b/g, '\\int ');
-            e = e.replace(/defint/g, '\\int ');
-            e = e.replace(/\blimit\b/g, '\\lim ');
-            e = e.replace(/log/g, '\\ln '); // Re-convert log back to ln for display
-            return e;
-        }
-
-        // --- SOLVER LOGIC ---
-        solveBtn.addEventListener('click', () => {
-            if (!currentLatex) return;
-            solveBtn.innerText = "⏳...";
-            
-            try {
-                const parsedExpr = parseLatexToNerdamer(currentLatex);
-                let solutionTeX = "";
-
-                if (parsedExpr.includes('=')) {
-                    // Equation Solver
-                    const parts = parsedExpr.split('=');
-                    const equation = `${parts[0].trim()} - (${parts[1].trim()})`;
-                    const variables = nerdamer(equation).variables();
-                    
-                    if (variables.length > 0) {
-                        const sol = nerdamer.solve(equation, variables[0]);
-                        solutionTeX = `${variables[0]} = ${sol.toTeX()}`;
-                    } else {
-                        solutionTeX = nerdamer(parsedExpr).evaluate().toTeX();
-                    }
-                } else {
-                    // Evaluate Integrals, Limits, Derivatives, and Arithmetic
-                    solutionTeX = nerdamer(parsedExpr).evaluate().toTeX();
-                }
-
-                // Apply the cleanup filter to the solution
-                solutionTeX = formatSolutionTeX(solutionTeX);
-
-                // Render final result
-                const finalOutput = `${currentLatex} \\Rightarrow ${solutionTeX}`;
-                renderMath(finalOutput);
+                targetDiv.removeAttribute('id');
+                window._aiChatHistory.push({ role: 'assistant', content: fullText });
                 
-            } catch (err) {
-                console.error("Math Solver Error:", err);
-                alert("The solver could not evaluate this expression. Ensure your handwriting clearly represents a valid mathematical or calculus operation.");
-            } finally {
-                solveBtn.innerText = "✨ Solve Math";
+                if (!window._aiTtsMuted && sentenceBuffer.trim() && window._aiVoiceSocket && window._aiVoiceSocket.readyState === WebSocket.OPEN) {
+                    window._aiVoiceSocket.send(JSON.stringify({ action: 'synthesize_text', text: sentenceBuffer }));
+                }
+            } catch (e) {
+                document.getElementById(streamId).innerHTML = `<span class="text-red-500">Error: ${e.message}</span>`;
             }
-        });
+        }
 
-        // --- EVENT LISTENERS ---
-        undoBtn.addEventListener('click', () => { if (editor) editor.undo(); });
-        redoBtn.addEventListener('click', () => { if (editor) editor.redo(); });
-        clearBtn.addEventListener('click', () => {
-            if (editor) {
-                editor.clear();
-                resetResultBar();
+        function stopAITTS() {
+            window._aiVoiceQueue = [];
+            if (window._activeAIAudioSource) {
+                try { window._activeAIAudioSource.stop(); } catch(e) {}
+                window._activeAIAudioSource = null;
             }
-        });
+            window._aiIsPlaying = false;
+        }
 
-        window.addEventListener('resize', () => {
-            if (editor) editor.resize();
-        });
+        function toggleAITTS() {
+            window._aiTtsMuted = !window._aiTtsMuted;
+            const btn = document.getElementById('ai-tts-toggle-btn');
+            if (window._aiTtsMuted) {
+                btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                btn.classList.add('text-red-500');
+                stopAITTS();
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                btn.classList.remove('text-red-500');
+            }
+        }
+
+        async function startAIVoice() {
+            stopAITTS();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                window._aiAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                window._aiAnalyser = window._aiAudioContext.createAnalyser();
+                const source = window._aiAudioContext.createMediaStreamSource(stream);
+                source.connect(window._aiAnalyser);
+                window._aiAnalyser.connect(window._aiAudioContext.destination);
+                
+                document.getElementById('ai-voice-visualizer-container').classList.remove('hidden');
+                drawVoiceVisualizer();
+
+                document.getElementById('ai-mic-btn').classList.add('hidden');
+                document.getElementById('ai-stop-btn').classList.remove('hidden');
+
+                // Hardcoded securely to your VPS
+                window._aiVoiceSocket = new WebSocket(`wss://openclase.com/ai-voice`);
+                window._aiVoiceSocket.binaryType = 'arraybuffer';
+                
+                window._aiVoiceSocket.onopen = () => {
+                    window._aiMediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    window._aiMediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0 && window._aiVoiceSocket.readyState === WebSocket.OPEN) {
+                            window._aiVoiceSocket.send(e.data);
+                        }
+                    };
+                    window._aiMediaRecorder.start(250); 
+                };
+
+                window._aiVoiceSocket.onmessage = async (e) => {
+                    if (e.data instanceof ArrayBuffer) {
+                        if (window._aiTtsMuted) return; 
+                        window._aiVoiceQueue.push(e.data);
+                        playNextAIAudio();
+                    } else {
+                        const msg = JSON.parse(e.data);
+                        if (msg.type === 'transcript') {
+                            document.getElementById('ai-input').value = msg.text;
+                            sendAIMessage(); 
+                        }
+                    }
+                };
+            } catch (e) {
+                console.error("Mic access error", e);
+                alert("Microphone access denied or error occurred.");
+            }
+        }
+
+        function stopAIVoice() {
+            if (window._aiMediaRecorder && window._aiMediaRecorder.state !== 'inactive') {
+                window._aiMediaRecorder.stop();
+                if (window._aiVoiceSocket && window._aiVoiceSocket.readyState === WebSocket.OPEN) {
+                    window._aiVoiceSocket.send(JSON.stringify({ action: 'process_audio' }));
+                }
+            }
+            
+            const canvas = document.getElementById('ai-voice-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            document.getElementById('ai-voice-visualizer-container')?.classList.add('hidden');
+            document.getElementById('ai-mic-btn')?.classList.remove('hidden');
+            document.getElementById('ai-stop-btn')?.classList.add('hidden');
+        }
+
+        function drawVoiceVisualizer() {
+            const canvas = document.getElementById('ai-voice-canvas');
+            if (!canvas || !window._aiAudioContext) return;
+            const ctx = canvas.getContext('2d');
+            
+            const bufferLength = window._aiAnalyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            function draw() {
+                if (!window._aiAudioContext) return;
+                requestAnimationFrame(draw);
+                window._aiAnalyser.getByteFrequencyData(dataArray);
+                
+                ctx.fillStyle = 'rgb(0, 0, 0)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+                
+                for(let i = 0; i < bufferLength; i++) {
+                    barHeight = dataArray[i] / 2;
+                    ctx.fillStyle = 'rgb(247, 148, 29)'; 
+                    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                    x += barWidth + 1;
+                }
+            }
+            draw();
+        }
     </script>
 </body>
 </html>
