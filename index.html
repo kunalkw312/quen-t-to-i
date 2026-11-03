@@ -1,16 +1,52 @@
 <!-- ... existing code ... -->
-        .vjs-theme-custom:hover .vjs-big-play-button {
-            background-color: #4f46e5;
-            transform: scale(1.1);
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>vlitejs YouTube Player</title>
+    <!-- Tailwind CSS for UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- vlitejs CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vlitejs@4/dist/vlite.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
         }
 
-        .quality-badge {
-            font-size: 0.7em;
-            background: rgba(99, 102, 241, 0.2);
-            color: #818cf8;
-            border: 1px solid rgba(99, 102, 241, 0.4);
-            padding: 2px 8px;
-            border-radius: 4px;
+        /* Responsive video player container with strict clipping for 5% zoom */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            background-color: #000;
+        }
+
+        /* 5% Zoom applied to crop YouTube branding overlays */
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scale(1.05);
+            transform-origin: center center;
+            pointer-events: auto;
+        }
+
+        /* vlitejs custom theme tweaks */
+        .vlite-js {
+            --vlite-primaryColor: #6366f1;
+            border-radius: 12px;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -19,109 +55,52 @@
     <div class="max-w-4xl w-full flex flex-col items-center gap-6">
 
         <header class="text-center">
-            <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white mb-1">Clean YouTube Video.js Player</h1>
-            <p class="text-slate-400 text-sm">5% Edge Zoom • Locked Max Quality (1080p HD) • Mobile Optimized</p>
+            <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white mb-1">vlitejs YouTube Player</h1>
+            <p class="text-slate-400 text-sm">Lightweight • 5% Edge Zoom • iOS Inline Playback</p>
         </header>
 
-        <div class="w-full video-container">
-            <video
-                id="my-video"
-                class="video-js vjs-big-play-centered vjs-theme-custom"
-                controls
-                preload="auto"
-                playsinline
-                webkit-playsinline
-                width="640"
-                height="360">
-            </video>
+        <div class="w-full video-wrapper">
+            <div id="player" data-youtube-id="c8zq4kAn_O0"></div>
         </div>
 
-        <div class="w-full bg-slate-800/60 backdrop-blur rounded-lg p-5 border border-slate-700/50 text-sm text-slate-300">
-            <div class="flex items-center justify-between">
-                <h2 class="font-semibold text-slate-100 text-base">Playback Quality Locked</h2>
-                <span class="quality-badge" id="current-quality-display">Highest Quality (1080p HD)</span>
-            </div>
+        <div class="w-full bg-slate-800/60 backdrop-blur rounded-lg p-4 border border-slate-700/50 text-sm text-slate-300 flex items-center justify-between">
+            <span class="font-medium text-slate-200">Powered by vlitejs</span>
+            <span class="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2.5 py-1 rounded">Clean Embed</span>
         </div>
 
     </div>
 
-    <!-- Video.js Core -->
-    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
-    <!-- Video.js YouTube Plugin -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-youtube/2.6.1/Youtube.min.js"></script>
+    <!-- vlitejs Core & YouTube Provider -->
+    <script src="https://cdn.jsdelivr.net/npm/vlitejs@4/dist/vlite.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vlitejs@4/dist/providers/youtube.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const getOrigin = () => {
-                try {
-                    return window.location.origin && window.location.origin !== "null"
-                        ? window.location.origin
-                        : window.location.protocol + "//" + window.location.host;
-                } catch (e) {
-                    return "*";
-                }
-            };
+        document.addEventListener('DOMContentLoaded', function () {
+            // Register YouTube provider for vlitejs
+            Vlitejs.registerProvider('youtube', VlitejsYoutube);
 
-            const CURRENT_VIDEO_ID = 'c8zq4kAn_O0';
-
-            // Store max quality preference hint for YouTube API before load
-            try {
-                const ytQualityObj = { data: 'hd1080', creation: Date.now() };
-                localStorage.setItem('yt-player-quality', JSON.stringify(ytQualityObj));
-            } catch(e) {}
-
-            const player = videojs('my-video', {
-                techOrder: ['youtube'],
-                sources: [{
-                    type: 'video/youtube',
-                    src: 'https://www.youtube.com/watch?v=' + CURRENT_VIDEO_ID
-                }],
-                playsinline: true,
-                youtube: {
+            // Initialize vlitejs player
+            const player = new Vlitejs('#player', {
+                options: {
+                    controls: true,
+                    autoplay: false,
+                    playPause: true,
+                    progressBar: true,
+                    time: true,
+                    volume: true,
+                    fullscreen: true,
+                    poster: '',
+                    bigPlay: true,
+                    playsinline: true
+                },
+                providerOptions: {
                     ytcontrols: 0,
-                    modestbranding: 1,
                     rel: 0,
-                    iv_load_policy: 3,
-                    cc_load_policy: 0,
-                    disablekb: 1,
-                    customVars: {
-                        playsinline: 1,
-                        enablejsapi: 1,
-                        origin: getOrigin(),
-                        vq: 'hd1080'
-                    }
-                }
-            });
-
-            // Force locked max quality execution whenever player becomes ready or starts playing
-            player.ready(function () {
-                const enforceMaxQuality = () => {
-                    const tech = player.tech({ IWillNotUseThisInPlugins: true });
-                    if (tech && tech.ytPlayer) {
-                        const yt = tech.ytPlayer;
-                        if (typeof yt.setPlaybackQuality === 'function') {
-                            yt.setPlaybackQuality('hd1080');
-                        }
-                        if (typeof yt.setPlaybackQualityRange === 'function') {
-                            yt.setPlaybackQualityRange('hd1080', 'hd1080');
-                        }
-                    }
-                };
-
-                player.on('play', enforceMaxQuality);
-                player.on('firstplay', enforceMaxQuality);
-                player.on('loadstart', enforceMaxQuality);
-
-                // iOS Touch Fallback for Big Play Button
-                const bigPlayBtn = player.bigPlayButton ? player.bigPlayButton.el() : null;
-                if (bigPlayBtn) {
-                    const handlePlayTouch = function (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        player.play();
-                    };
-                    bigPlayBtn.addEventListener('touchend', handlePlayTouch, { passive: false });
-                    bigPlayBtn.addEventListener('click', handlePlayTouch);
+                    modestbranding: 1,
+                    playsinline: 1
+                },
+                onReady: function (playerInstance) {
+                    console.log('vlitejs YouTube player is ready');
                 }
             });
         });
