@@ -164,10 +164,10 @@
         <div class="w-full bg-slate-800/60 backdrop-blur rounded-lg p-5 border border-slate-700/50 text-sm text-slate-300">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="font-semibold text-slate-100 text-base">iOS & Playback Highlights:</h2>
-                <span class="quality-badge" id="current-quality-display">Quality: Auto</span>
+                <span class="quality-badge" id="current-quality-display">Quality: Auto (Adaptive)</span>
             </div>
             <ul class="list-disc list-inside space-y-1.5 text-slate-400">
-                <li><strong class="text-slate-200">Quality Control:</strong> Dynamically queries available quality levels from YouTube's API to switch resolution streams.</li>
+                <li><strong class="text-slate-200">Quality Switcher:</strong> Direct YouTube IFrame API parameter forced stream reload with timestamp preservation.</li>
                 <li><strong class="text-slate-200">iOS Inline Playback:</strong> Enabled <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">playsinline</code> & <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">webkit-playsinline</code> to prevent forced fullscreen mode on iPhones.</li>
                 <li><strong class="text-slate-200">Touch Delegation:</strong> Modified pointer events & z-index layers so iOS touch gestures cleanly trigger playback.</li>
                 <li><strong class="text-slate-200">No YouTube Branding:</strong> Disabled default YouTube overlay controls, annotations, related videos, and embedded watermarks.</li>
@@ -243,25 +243,30 @@
                         if (tech && tech.ytPlayer) {
                             const yt = tech.ytPlayer;
                             const currentTime = playerInstance.currentTime();
-                            const isPlaying = !playerInstance.paused();
+                            const isPaused = playerInstance.paused();
 
-                            // Method 1: Try setPlaybackQualityRange if supported by iframe API
-                            if (typeof yt.setPlaybackQualityRange === 'function') {
-                                yt.setPlaybackQualityRange(selectedQuality, selectedQuality);
-                            }
-
-                            // Method 2: Force YouTube stream quality reload preserving timestamp & playing state
+                            // Execute direct quality forced stream switch via YouTube API
                             if (typeof yt.loadVideoById === 'function') {
                                 yt.loadVideoById({
                                     videoId: CURRENT_VIDEO_ID,
                                     startSeconds: currentTime,
                                     suggestedQuality: selectedQuality
                                 });
-                                if (!isPlaying) {
-                                    setTimeout(() => playerInstance.pause(), 200);
-                                }
-                            } else if (typeof yt.setSuggestedVideoQuality === 'function') {
-                                yt.setSuggestedVideoQuality(selectedQuality);
+                            }
+
+                            if (typeof yt.setPlaybackQuality === 'function') {
+                                yt.setPlaybackQuality(selectedQuality);
+                            }
+
+                            if (typeof yt.setPlaybackQualityRange === 'function') {
+                                yt.setPlaybackQualityRange(selectedQuality, selectedQuality);
+                            }
+
+                            // If video was playing, ensure playback resumes smoothly after stream reload
+                            if (!isPaused) {
+                                setTimeout(() => {
+                                    playerInstance.play();
+                                }, 300);
                             }
                         }
 
@@ -269,7 +274,7 @@
                             qualityBadge.innerText = `Quality: ${label}`;
                         }
 
-                        // Safely update selection highlight state
+                        // Update menu active selected highlight
                         if (this.menuButton_ && this.menuButton_.menu) {
                             const items = this.menuButton_.menu.children_;
                             if (items && Array.isArray(items)) {
@@ -292,38 +297,15 @@
                     }
 
                     createItems() {
-                        let qualities = [
+                        const qualities = [
                             { label: 'Auto (Adaptive)', value: 'default' },
                             { label: '1080p HD', value: 'hd1080' },
                             { label: '720p HD', value: 'hd720' },
                             { label: '480p SD', value: 'large' },
                             { label: '360p SD', value: 'medium' },
-                            { label: '240p Low', value: 'small' }
+                            { label: '240p Low', value: 'small' },
+                            { label: '144p Low', value: 'tiny' }
                         ];
-
-                        // Dynamically query available quality levels from YouTube API if ready
-                        const tech = playerInstance.tech({ IWillNotUseThisInPlugins: true });
-                        if (tech && tech.ytPlayer && typeof tech.ytPlayer.getAvailableQualityLevels === 'function') {
-                            const available = tech.ytPlayer.getAvailableQualityLevels();
-                            if (available && available.length > 0) {
-                                const qualityMap = {
-                                    'highres': '4K / Original',
-                                    'hd1440': '1440p QHD',
-                                    'hd1080': '1080p HD',
-                                    'hd720': '720p HD',
-                                    'large': '480p SD',
-                                    'medium': '360p SD',
-                                    'small': '240p Low',
-                                    'tiny': '144p Low',
-                                    'auto': 'Auto (Adaptive)',
-                                    'default': 'Auto (Adaptive)'
-                                };
-                                qualities = available.map(q => ({
-                                    label: qualityMap[q] || q,
-                                    value: q
-                                }));
-                            }
-                        }
 
                         return qualities.map(q => {
                             const item = new QualityMenuItem(playerInstance, {
@@ -346,15 +328,6 @@
                 playerInstance.ready(function () {
                     const btn = new QualityMenuButton(playerInstance, {});
                     playerInstance.controlBar.addChild(btn, {}, playerInstance.controlBar.children().length - 1);
-                    
-                    // Refresh quality items once YouTube API reports stream is playing
-                    playerInstance.on('play', function() {
-                        setTimeout(() => {
-                            if (btn && typeof btn.update === 'function') {
-                                btn.update();
-                            }
-                        }, 1000);
-                    });
                 });
             });
 
