@@ -196,12 +196,14 @@
                 }
             };
 
+            const CURRENT_VIDEO_ID = 'c8zq4kAn_O0';
+
             // Initialize Player with iOS options & stripped YouTube branding
             const player = videojs('my-video', {
                 techOrder: ['youtube'],
                 sources: [{
                     type: 'video/youtube',
-                    src: 'https://www.youtube.com/watch?v=koWgYSGVtCc'
+                    src: 'https://www.youtube.com/watch?v=' + CURRENT_VIDEO_ID
                 }],
                 playsinline: true,
                 youtube: {
@@ -229,6 +231,7 @@
                     constructor(player, options) {
                         super(player, options);
                         this.quality = options.quality;
+                        this.qualityLabel = options.label;
                     }
 
                     handleClick() {
@@ -236,40 +239,29 @@
                         const qualityBadge = document.getElementById('current-quality-display');
                         
                         if (tech && tech.ytPlayer) {
-                            const currentTime = playerInstance.currentTime();
-                            const isPaused = playerInstance.paused();
-                            
-                            // Set playback quality on YouTube player instance
+                            // Direct YouTube API setPlaybackQuality call
                             if (typeof tech.ytPlayer.setPlaybackQuality === 'function') {
                                 tech.ytPlayer.setPlaybackQuality(this.quality);
                             }
-
-                            // Reload video at current timestamp with selected quality target
-                            if (typeof tech.ytPlayer.loadVideoById === 'function') {
-                                tech.ytPlayer.loadVideoById({
-                                    videoId: 'koWgYSGVtCc',
-                                    startSeconds: currentTime,
-                                    suggestedQuality: this.quality
-                                });
-
-                                if (isPaused) {
-                                    setTimeout(() => playerInstance.pause(), 150);
-                                }
+                            if (typeof tech.ytPlayer.setSuggestedVideoQuality === 'function') {
+                                tech.ytPlayer.setSuggestedVideoQuality(this.quality);
                             }
                         }
 
                         if (qualityBadge) {
-                            qualityBadge.innerText = `Quality: ${this.options_.label}`;
+                            qualityBadge.innerText = `Quality: ${this.qualityLabel}`;
                         }
 
-                        // Safely handle menu selection state
-                        if (this.menuButton_) {
-                            const items = this.menuButton_.menu.children();
-                            items.forEach(item => {
-                                if (typeof item.selected === 'function') {
-                                    item.selected(false);
-                                }
-                            });
+                        // Safely handle menu selection state using component methods
+                        if (this.menuButton_ && this.menuButton_.menu) {
+                            const items = this.menuButton_.menu.children_;
+                            if (items && Array.isArray(items)) {
+                                items.forEach(item => {
+                                    if (item && typeof item.selected === 'function') {
+                                        item.selected(false);
+                                    }
+                                });
+                            }
                         }
                         this.selected(true);
                     }
@@ -292,7 +284,7 @@
                             { label: '240p Low', value: 'small' }
                         ];
 
-                        // Dynamically update available quality levels from YouTube API if ready
+                        // Dynamically query available quality levels from YouTube API if ready
                         const tech = playerInstance.tech({ IWillNotUseThisInPlugins: true });
                         if (tech && tech.ytPlayer && typeof tech.ytPlayer.getAvailableQualityLevels === 'function') {
                             const available = tech.ytPlayer.getAvailableQualityLevels();
@@ -316,11 +308,15 @@
                             }
                         }
 
-                        return qualities.map(q => new QualityMenuItem(playerInstance, {
-                            label: q.label,
-                            quality: q.value,
-                            selectable: true
-                        }));
+                        return qualities.map(q => {
+                            const item = new QualityMenuItem(playerInstance, {
+                                label: q.label,
+                                quality: q.value,
+                                selectable: true
+                            });
+                            item.menuButton_ = this;
+                            return item;
+                        });
                     }
 
                     buildCSSClass() {
@@ -331,7 +327,17 @@
                 videojs.registerComponent('QualityMenuButton', QualityMenuButton);
 
                 playerInstance.ready(function () {
-                    playerInstance.controlBar.addChild('QualityMenuButton', {}, playerInstance.controlBar.children().length - 1);
+                    const btn = new QualityMenuButton(playerInstance, {});
+                    playerInstance.controlBar.addChild(btn, {}, playerInstance.controlBar.children().length - 1);
+                    
+                    // Refresh quality items once YouTube API reports stream is playing
+                    playerInstance.on('play', function() {
+                        setTimeout(() => {
+                            if (btn && typeof btn.update === 'function') {
+                                btn.update();
+                            }
+                        }, 1000);
+                    });
                 });
             });
 
