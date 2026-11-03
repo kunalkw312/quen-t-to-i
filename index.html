@@ -167,7 +167,7 @@
                 <span class="quality-badge" id="current-quality-display">Quality: Auto</span>
             </div>
             <ul class="list-disc list-inside space-y-1.5 text-slate-400">
-                <li><strong class="text-slate-200">Quality Control:</strong> YouTube relies on Adaptive Bitrate (ABR). Selecting a quality level now forces a stream reload with YouTube's target quality parameter.</li>
+                <li><strong class="text-slate-200">Quality Control:</strong> Dynamically queries available quality levels from YouTube's API to switch resolution streams.</li>
                 <li><strong class="text-slate-200">iOS Inline Playback:</strong> Enabled <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">playsinline</code> & <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">webkit-playsinline</code> to prevent forced fullscreen mode on iPhones.</li>
                 <li><strong class="text-slate-200">Touch Delegation:</strong> Modified pointer events & z-index layers so iOS touch gestures cleanly trigger playback.</li>
                 <li><strong class="text-slate-200">No YouTube Branding:</strong> Disabled default YouTube overlay controls, annotations, related videos, and embedded watermarks.</li>
@@ -185,17 +185,23 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Determine current origin for YouTube iframe security compliance (fixes Error 153)
-            const originUrl = window.location.origin && window.location.origin !== "null" 
-                ? window.location.origin 
-                : "*";
+            // Determine current origin for YouTube iframe API compliance
+            const getOrigin = () => {
+                try {
+                    return window.location.origin && window.location.origin !== "null"
+                        ? window.location.origin
+                        : window.location.protocol + "//" + window.location.host;
+                } catch (e) {
+                    return "*";
+                }
+            };
 
-            // Initialize Player with iOS specific options & stripped YouTube branding
+            // Initialize Player with iOS options & stripped YouTube branding
             const player = videojs('my-video', {
                 techOrder: ['youtube'],
                 sources: [{
                     type: 'video/youtube',
-                    src: 'https://youtu.be/c8zq4kAn_O0?si=WGpJKtmErf31a30Q'
+                    src: 'https://www.youtube.com/watch?v=koWgYSGVtCc'
                 }],
                 playsinline: true,
                 youtube: {
@@ -208,7 +214,7 @@
                     customVars: {
                         playsinline: 1,   // Explicit YouTube iframe iOS parameter
                         enablejsapi: 1,   // Enable JS API controls
-                        origin: originUrl // Fix Error 153: pass origin parameter
+                        origin: getOrigin()
                     }
                 }
             });
@@ -233,12 +239,12 @@
                             const currentTime = playerInstance.currentTime();
                             const isPaused = playerInstance.paused();
                             
-                            // Call legacy quality API if available
+                            // Set playback quality on YouTube player instance
                             if (typeof tech.ytPlayer.setPlaybackQuality === 'function') {
                                 tech.ytPlayer.setPlaybackQuality(this.quality);
                             }
 
-                            // Reload video at current timestamp with requested quality target
+                            // Reload video at current timestamp with selected quality target
                             if (typeof tech.ytPlayer.loadVideoById === 'function') {
                                 tech.ytPlayer.loadVideoById({
                                     videoId: 'koWgYSGVtCc',
@@ -247,7 +253,7 @@
                                 });
 
                                 if (isPaused) {
-                                    setTimeout(() => playerInstance.pause(), 100);
+                                    setTimeout(() => playerInstance.pause(), 150);
                                 }
                             }
                         }
@@ -255,9 +261,16 @@
                         if (qualityBadge) {
                             qualityBadge.innerText = `Quality: ${this.options_.label}`;
                         }
-                        
-                        const items = this.menu.children();
-                        items.forEach(item => item.selected(false));
+
+                        // Safely handle menu selection state
+                        if (this.menuButton_) {
+                            const items = this.menuButton_.menu.children();
+                            items.forEach(item => {
+                                if (typeof item.selected === 'function') {
+                                    item.selected(false);
+                                }
+                            });
+                        }
                         this.selected(true);
                     }
                 }
@@ -270,7 +283,7 @@
                     }
 
                     createItems() {
-                        const qualities = [
+                        let qualities = [
                             { label: 'Auto (Adaptive)', value: 'default' },
                             { label: '1080p HD', value: 'hd1080' },
                             { label: '720p HD', value: 'hd720' },
@@ -278,6 +291,30 @@
                             { label: '360p SD', value: 'medium' },
                             { label: '240p Low', value: 'small' }
                         ];
+
+                        // Dynamically update available quality levels from YouTube API if ready
+                        const tech = playerInstance.tech({ IWillNotUseThisInPlugins: true });
+                        if (tech && tech.ytPlayer && typeof tech.ytPlayer.getAvailableQualityLevels === 'function') {
+                            const available = tech.ytPlayer.getAvailableQualityLevels();
+                            if (available && available.length > 0) {
+                                const qualityMap = {
+                                    'highres': '4K / Original',
+                                    'hd1440': '1440p QHD',
+                                    'hd1080': '1080p HD',
+                                    'hd720': '720p HD',
+                                    'large': '480p SD',
+                                    'medium': '360p SD',
+                                    'small': '240p Low',
+                                    'tiny': '144p Low',
+                                    'auto': 'Auto (Adaptive)',
+                                    'default': 'Auto (Adaptive)'
+                                };
+                                qualities = available.map(q => ({
+                                    label: qualityMap[q] || q,
+                                    value: q
+                                }));
+                            }
+                        }
 
                         return qualities.map(q => new QualityMenuItem(playerInstance, {
                             label: q.label,
