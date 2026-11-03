@@ -1,152 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Fix YouTube Error 153: Enforce strict origin referrer policy for YouTube IFrame API -->
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    <title>Video.js Custom YouTube Player (iOS Optimized)</title>
-
-    <!-- Tailwind CSS for Page Layout -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Video.js Base CSS -->
-    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- Custom Styling for Zoom, Touch Delegation, and Theme -->
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* 16:9 Aspect Ratio Responsive Container */
-        .video-container {
-            position: relative;
-            width: 100%;
-            padding-top: 56.25%; /* 16:9 Aspect Ratio */
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            background: #000000;
-        }
-
-        .video-js {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100% !important;
-            height: 100% !important;
-        }
-
-        /* 5% Zoom to hide edge YouTube branding watermarks */
-        .vjs-tech {
-            transform: scale(1.05) !important;
-            transform-origin: center center !important;
-            object-fit: cover !important;
-            pointer-events: none !important; /* Allow tap events to reach Video.js overlay on mobile */
-        }
-
-        /* iOS Touch Target Fix for Big Play Button */
-        .vjs-big-play-button {
-            z-index: 20 !important;
-            pointer-events: auto !important;
-            cursor: pointer !important;
-        }
-
-        /* Custom Video.js Controls Styling */
-        .vjs-theme-custom .vjs-control-bar {
-            background: rgba(15, 23, 42, 0.88);
-            backdrop-filter: blur(8px);
-            border-bottom-left-radius: 12px;
-            border-bottom-right-radius: 12px;
-            height: 4em;
-            padding: 0 8px;
-            z-index: 25 !important;
-        }
-
-        .vjs-theme-custom .vjs-play-progress,
-        .vjs-theme-custom .vjs-volume-level {
-            background-color: #6366f1;
-        }
-
-        .vjs-theme-custom .vjs-big-play-button {
-            background-color: rgba(99, 102, 241, 0.95);
-            border: none;
-            border-radius: 50%;
-            width: 72px;
-            height: 72px;
-            line-height: 72px;
-            margin-top: -36px;
-            margin-left: -36px;
-            transition: transform 0.2s ease, background-color 0.2s ease;
-        }
-
-        .vjs-theme-custom:hover .vjs-big-play-button,
-        .vjs-theme-custom:active .vjs-big-play-button {
+<!-- ... existing code ... -->
+        .vjs-theme-custom:hover .vjs-big-play-button {
             background-color: #4f46e5;
             transform: scale(1.1);
         }
 
-        /* Quality Selector Button Styling */
-        .vjs-quality-selector-btn {
-            font-size: 1.2em;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .vjs-menu-button-popup .vjs-menu {
-            bottom: 4em;
-        }
-
-        .vjs-menu-button-popup .vjs-menu .vjs-menu-content {
-            background-color: rgba(15, 23, 42, 0.95);
-            border-radius: 8px;
-            backdrop-filter: blur(8px);
-            padding: 4px 0;
-        }
-
-        .vjs-menu-item {
-            font-size: 0.9em;
-            padding: 6px 12px;
-            text-transform: capitalize;
-        }
-
-        .vjs-menu-item.vjs-selected {
-            background-color: #6366f1;
-            color: #ffffff;
-        }
-
-        /* Quality info indicator badge */
         .quality-badge {
             font-size: 0.7em;
             background: rgba(99, 102, 241, 0.2);
             color: #818cf8;
             border: 1px solid rgba(99, 102, 241, 0.4);
-            padding: 2px 6px;
+            padding: 2px 8px;
             border-radius: 4px;
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
 
-    <!-- App Container -->
     <div class="max-w-4xl w-full flex flex-col items-center gap-6">
 
-        <!-- Header -->
         <header class="text-center">
             <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white mb-1">Clean YouTube Video.js Player</h1>
-            <p class="text-slate-400 text-sm">5% Scaled Zoom • Quality Selector • iOS Safari Touch Optimized</p>
+            <p class="text-slate-400 text-sm">5% Edge Zoom • Locked Max Quality (1080p HD) • Mobile Optimized</p>
         </header>
 
-        <!-- Player Container -->
         <div class="w-full video-container">
             <video
                 id="my-video"
@@ -160,32 +36,22 @@
             </video>
         </div>
 
-        <!-- Details Card -->
         <div class="w-full bg-slate-800/60 backdrop-blur rounded-lg p-5 border border-slate-700/50 text-sm text-slate-300">
-            <div class="flex items-center justify-between mb-2">
-                <h2 class="font-semibold text-slate-100 text-base">iOS & Playback Highlights:</h2>
-                <span class="quality-badge" id="current-quality-display">Quality: Auto (Adaptive)</span>
+            <div class="flex items-center justify-between">
+                <h2 class="font-semibold text-slate-100 text-base">Playback Quality Locked</h2>
+                <span class="quality-badge" id="current-quality-display">Highest Quality (1080p HD)</span>
             </div>
-            <ul class="list-disc list-inside space-y-1.5 text-slate-400">
-                <li><strong class="text-slate-200">Quality Switcher:</strong> Direct YouTube IFrame API parameter forced stream reload with timestamp preservation.</li>
-                <li><strong class="text-slate-200">iOS Inline Playback:</strong> Enabled <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">playsinline</code> & <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">webkit-playsinline</code> to prevent forced fullscreen mode on iPhones.</li>
-                <li><strong class="text-slate-200">Touch Delegation:</strong> Modified pointer events & z-index layers so iOS touch gestures cleanly trigger playback.</li>
-                <li><strong class="text-slate-200">No YouTube Branding:</strong> Disabled default YouTube overlay controls, annotations, related videos, and embedded watermarks.</li>
-                <li><strong class="text-slate-200">5% Edge Zoom:</strong> <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">scale(1.05)</code> crops outer watermark branding edges smoothly.</li>
-            </ul>
         </div>
 
     </div>
 
     <!-- Video.js Core -->
     <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
-
-    <!-- Video.js YouTube Tech Engine -->
+    <!-- Video.js YouTube Plugin -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-youtube/2.6.1/Youtube.min.js"></script>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Determine current origin for YouTube iframe API compliance
             const getOrigin = () => {
                 try {
                     return window.location.origin && window.location.origin !== "null"
@@ -198,7 +64,12 @@
 
             const CURRENT_VIDEO_ID = 'c8zq4kAn_O0';
 
-            // Initialize Player with iOS options & stripped YouTube branding
+            // Store max quality preference hint for YouTube API before load
+            try {
+                const ytQualityObj = { data: 'hd1080', creation: Date.now() };
+                localStorage.setItem('yt-player-quality', JSON.stringify(ytQualityObj));
+            } catch(e) {}
+
             const player = videojs('my-video', {
                 techOrder: ['youtube'],
                 sources: [{
@@ -207,143 +78,41 @@
                 }],
                 playsinline: true,
                 youtube: {
-                    ytcontrols: 0,        // Hide default YouTube controls
-                    modestbranding: 1,    // Hide YouTube logo
-                    rel: 0,               // Disable end-screen recommendations
-                    iv_load_policy: 3,    // Hide video annotations
-                    cc_load_policy: 0,    // Disable captions by default
-                    disablekb: 1,         // Disable default keyboard hooks
+                    ytcontrols: 0,
+                    modestbranding: 1,
+                    rel: 0,
+                    iv_load_policy: 3,
+                    cc_load_policy: 0,
+                    disablekb: 1,
                     customVars: {
-                        playsinline: 1,   // Explicit YouTube iframe iOS parameter
-                        enablejsapi: 1,   // Enable JS API controls
+                        playsinline: 1,
+                        enablejsapi: 1,
                         origin: getOrigin(),
-                        vq: 'hd1080'      // Force YouTube stream to request MAX quality (1080p) on load
+                        vq: 'hd1080'
                     }
                 }
             });
 
-            // Register Custom Quality Selector Plugin
-            videojs.registerPlugin('qualitySelector', function () {
-                const playerInstance = this;
-                const MenuButton = videojs.getComponent('MenuButton');
-                const MenuItem = videojs.getComponent('MenuItem');
-
-                class QualityMenuItem extends MenuItem {
-                    constructor(player, options) {
-                        super(player, options);
-                        this.quality = options.quality;
-                        this.qualityLabel = options.label;
-                        this.targetWidth = options.width;
-                        this.targetHeight = options.height;
-                    }
-
-                    handleClick() {
-                        const tech = playerInstance.tech({ IWillNotUseThisInPlugins: true });
-                        const qualityBadge = document.getElementById('current-quality-display');
-                        const selectedQuality = this.quality;
-                        const label = this.qualityLabel;
-
-                        if (tech && tech.ytPlayer) {
-                            const yt = tech.ytPlayer;
-                            const iframe = tech.el(); // YouTube iframe target element
-
-                            // 1. Force YouTube API direct call
-                            if (typeof yt.setPlaybackQuality === 'function') {
-                                yt.setPlaybackQuality(selectedQuality);
-                            }
-
-                            if (typeof yt.setPlaybackQualityRange === 'function') {
-                                yt.setPlaybackQualityRange(selectedQuality, selectedQuality);
-                            }
-
-                            // 2. Adjust iframe viewport dimensions to force YouTube DASH adaptive bitrate downscaling/upscaling
-                            if (iframe && this.targetWidth && this.targetHeight) {
-                                if (selectedQuality === 'default' || selectedQuality === 'hd1080') {
-                                    iframe.style.width = '100%';
-                                    iframe.style.height = '100%';
-                                } else {
-                                    // Scale down iframe render context to trigger lower quality stream selection
-                                    iframe.style.width = this.targetWidth + 'px';
-                                    iframe.style.height = this.targetHeight + 'px';
-                                }
-                            }
-                        }
-
-                        if (qualityBadge) {
-                            qualityBadge.innerText = `Quality: ${label}`;
-                        }
-
-                        // Update menu active selected highlight
-                        if (this.menuButton_ && this.menuButton_.menu) {
-                            const items = this.menuButton_.menu.children_;
-                            if (items && Array.isArray(items)) {
-                                items.forEach(item => {
-                                    if (item && typeof item.selected === 'function') {
-                                        item.selected(false);
-                                    }
-                                });
-                            }
-                        }
-                        this.selected(true);
-                    }
-                }
-
-                class QualityMenuButton extends MenuButton {
-                    constructor(player, options) {
-                        super(player, options);
-                        this.addClass('vjs-quality-selector-btn');
-                        this.controlText('Quality');
-                    }
-
-                    createItems() {
-                        const qualities = [
-                            { label: 'Max / 1080p HD', value: 'hd1080', width: 1920, height: 1080 },
-                            { label: '720p HD', value: 'hd720', width: 1280, height: 720 },
-                            { label: '480p SD', value: 'large', width: 854, height: 480 },
-                            { label: '360p SD', value: 'medium', width: 640, height: 360 },
-                            { label: '240p Low', value: 'small', width: 426, height: 240 },
-                            { label: '144p Low', value: 'tiny', width: 256, height: 144 }
-                        ];
-
-                        return qualities.map(q => {
-                            const item = new QualityMenuItem(playerInstance, {
-                                label: q.label,
-                                quality: q.value,
-                                width: q.width,
-                                height: q.height,
-                                selectable: true
-                            });
-                            item.menuButton_ = this;
-                            return item;
-                        });
-                    }
-
-                    buildCSSClass() {
-                        return `vjs-icon-cog ${super.buildCSSClass()}`;
-                    }
-                }
-
-                videojs.registerComponent('QualityMenuButton', QualityMenuButton);
-
-                playerInstance.ready(function () {
-                    const btn = new QualityMenuButton(playerInstance, {});
-                    playerInstance.controlBar.addChild(btn, {}, playerInstance.controlBar.children().length - 1);
-                });
-            });
-
-            // Initialize Quality Selector Plugin
-            player.qualitySelector();
-
-            // Force Max Quality (1080p) on Initial Playback Ready State
-            player.on('ready', function () {
-                const tech = player.tech({ IWillNotUseThisInPlugins: true });
-                if (tech && tech.ytPlayer && typeof tech.ytPlayer.setPlaybackQuality === 'function') {
-                    tech.ytPlayer.setPlaybackQuality('hd1080');
-                }
-            });
-
-            // iOS Touch Fallback Listener: Guarantees touch events trigger play on iOS Safari
+            // Force locked max quality execution whenever player becomes ready or starts playing
             player.ready(function () {
+                const enforceMaxQuality = () => {
+                    const tech = player.tech({ IWillNotUseThisInPlugins: true });
+                    if (tech && tech.ytPlayer) {
+                        const yt = tech.ytPlayer;
+                        if (typeof yt.setPlaybackQuality === 'function') {
+                            yt.setPlaybackQuality('hd1080');
+                        }
+                        if (typeof yt.setPlaybackQualityRange === 'function') {
+                            yt.setPlaybackQualityRange('hd1080', 'hd1080');
+                        }
+                    }
+                };
+
+                player.on('play', enforceMaxQuality);
+                player.on('firstplay', enforceMaxQuality);
+                player.on('loadstart', enforceMaxQuality);
+
+                // iOS Touch Fallback for Big Play Button
                 const bigPlayBtn = player.bigPlayButton ? player.bigPlayButton.el() : null;
                 if (bigPlayBtn) {
                     const handlePlayTouch = function (e) {
