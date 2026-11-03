@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <title>vlitejs YouTube Player</title>
+    <title>vLite.js YouTube Player</title>
     <!-- Tailwind CSS for UI styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- vlitejs CSS -->
+    <!-- vLite.js CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vlitejs@4/dist/vlite.css">
     
     <style>
@@ -20,7 +20,7 @@
             color: #f8fafc;
         }
 
-        /* Responsive video player container with strict clipping for 5% zoom */
+        /* Responsive video player container with strict clipping for 10% zoom */
         .video-wrapper {
             position: relative;
             width: 100%;
@@ -31,19 +31,19 @@
             background-color: #000;
         }
 
-        /* 5% Zoom applied to crop YouTube branding overlays */
+        /* 10% Zoom applied to crop YouTube branding overlays completely */
         .video-wrapper iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            transform: scale(1.05);
+            transform: scale(1.10);
             transform-origin: center center;
             pointer-events: auto;
         }
 
-        /* vlitejs custom theme tweaks */
+        /* vLite.js custom theme styling */
         .vlite-js {
             --vlite-primaryColor: #6366f1;
             border-radius: 12px;
@@ -56,8 +56,8 @@
     <div class="max-w-4xl w-full flex flex-col items-center gap-6">
 
         <header class="text-center">
-            <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white mb-1">vlitejs YouTube Player</h1>
-            <p class="text-slate-400 text-sm">Lightweight • 5% Edge Zoom • iOS Inline Playback</p>
+            <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white mb-1">vLite.js YouTube Player</h1>
+            <p class="text-slate-400 text-sm">Fast & Minimalist • 10% Edge Zoom • Mobile Friendly</p>
         </header>
 
         <div class="w-full video-wrapper">
@@ -65,22 +65,22 @@
         </div>
 
         <div class="w-full bg-slate-800/60 backdrop-blur rounded-lg p-4 border border-slate-700/50 text-sm text-slate-300 flex items-center justify-between">
-            <span class="font-medium text-slate-200">Powered by vlitejs</span>
-            <span class="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2.5 py-1 rounded">Clean Embed</span>
+            <span class="font-medium text-slate-200">Powered by vLite.js</span>
+            <span class="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2.5 py-1 rounded">10% Zoom Clean Embed</span>
         </div>
 
     </div>
 
-    <!-- vlitejs Core & YouTube Provider -->
+    <!-- vLite.js Core & YouTube Provider -->
     <script src="https://cdn.jsdelivr.net/npm/vlitejs@4/dist/vlite.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vlitejs@4/dist/providers/youtube.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Register YouTube provider for vlitejs
+            // Register the YouTube provider for vLite.js
             Vlitejs.registerProvider('youtube', VlitejsYoutube);
 
-            // Initialize vlitejs player
+            // Initialize vLite.js player instance
             const player = new Vlitejs('#player', {
                 options: {
                     controls: true,
@@ -101,7 +101,7 @@
                     playsinline: 1
                 },
                 onReady: function (playerInstance) {
-                    console.log('vlitejs YouTube player is ready');
+                    console.log('vLite.js YouTube player initialized successfully');
                 }
             });
         });
