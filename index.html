@@ -123,6 +123,16 @@
             background-color: #6366f1;
             color: #ffffff;
         }
+
+        /* Quality info indicator badge */
+        .quality-badge {
+            font-size: 0.7em;
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
@@ -152,13 +162,16 @@
 
         <!-- Details Card -->
         <div class="w-full bg-slate-800/60 backdrop-blur rounded-lg p-5 border border-slate-700/50 text-sm text-slate-300">
-            <h2 class="font-semibold text-slate-100 text-base mb-2">iOS & Playback Highlights:</h2>
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="font-semibold text-slate-100 text-base">iOS & Playback Highlights:</h2>
+                <span class="quality-badge" id="current-quality-display">Quality: Auto</span>
+            </div>
             <ul class="list-disc list-inside space-y-1.5 text-slate-400">
+                <li><strong class="text-slate-200">Quality Control:</strong> YouTube relies on Adaptive Bitrate (ABR). Selecting a quality level now forces a stream reload with YouTube's target quality parameter.</li>
                 <li><strong class="text-slate-200">iOS Inline Playback:</strong> Enabled <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">playsinline</code> & <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">webkit-playsinline</code> to prevent forced fullscreen mode on iPhones.</li>
                 <li><strong class="text-slate-200">Touch Delegation:</strong> Modified pointer events & z-index layers so iOS touch gestures cleanly trigger playback.</li>
                 <li><strong class="text-slate-200">No YouTube Branding:</strong> Disabled default YouTube overlay controls, annotations, related videos, and embedded watermarks.</li>
                 <li><strong class="text-slate-200">5% Edge Zoom:</strong> <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400 text-xs">scale(1.05)</code> crops outer watermark branding edges smoothly.</li>
-                <li><strong class="text-slate-200">Quality Picker:</strong> Integrated dynamic resolution control button directly into the bar.</li>
             </ul>
         </div>
 
@@ -214,8 +227,33 @@
 
                     handleClick() {
                         const tech = playerInstance.tech({ IWillNotUseThisInPlugins: true });
-                        if (tech && tech.ytPlayer && typeof tech.ytPlayer.setPlaybackQuality === 'function') {
-                            tech.ytPlayer.setPlaybackQuality(this.quality);
+                        const qualityBadge = document.getElementById('current-quality-display');
+                        
+                        if (tech && tech.ytPlayer) {
+                            const currentTime = playerInstance.currentTime();
+                            const isPaused = playerInstance.paused();
+                            
+                            // Call legacy quality API if available
+                            if (typeof tech.ytPlayer.setPlaybackQuality === 'function') {
+                                tech.ytPlayer.setPlaybackQuality(this.quality);
+                            }
+
+                            // Reload video at current timestamp with requested quality target
+                            if (typeof tech.ytPlayer.loadVideoById === 'function') {
+                                tech.ytPlayer.loadVideoById({
+                                    videoId: 'koWgYSGVtCc',
+                                    startSeconds: currentTime,
+                                    suggestedQuality: this.quality
+                                });
+
+                                if (isPaused) {
+                                    setTimeout(() => playerInstance.pause(), 100);
+                                }
+                            }
+                        }
+
+                        if (qualityBadge) {
+                            qualityBadge.innerText = `Quality: ${this.options_.label}`;
                         }
                         
                         const items = this.menu.children();
@@ -233,12 +271,12 @@
 
                     createItems() {
                         const qualities = [
-                            { label: 'Auto', value: 'default' },
-                            { label: '1080p', value: 'hd1080' },
-                            { label: '720p', value: 'hd720' },
-                            { label: '480p', value: 'large' },
-                            { label: '360p', value: 'medium' },
-                            { label: '240p', value: 'small' }
+                            { label: 'Auto (Adaptive)', value: 'default' },
+                            { label: '1080p HD', value: 'hd1080' },
+                            { label: '720p HD', value: 'hd720' },
+                            { label: '480p SD', value: 'large' },
+                            { label: '360p SD', value: 'medium' },
+                            { label: '240p Low', value: 'small' }
                         ];
 
                         return qualities.map(q => new QualityMenuItem(playerInstance, {
