@@ -237,22 +237,39 @@
                     handleClick() {
                         const tech = playerInstance.tech({ IWillNotUseThisInPlugins: true });
                         const qualityBadge = document.getElementById('current-quality-display');
-                        
+                        const selectedQuality = this.quality;
+                        const label = this.qualityLabel;
+
                         if (tech && tech.ytPlayer) {
-                            // Direct YouTube API setPlaybackQuality call
-                            if (typeof tech.ytPlayer.setPlaybackQuality === 'function') {
-                                tech.ytPlayer.setPlaybackQuality(this.quality);
+                            const yt = tech.ytPlayer;
+                            const currentTime = playerInstance.currentTime();
+                            const isPlaying = !playerInstance.paused();
+
+                            // Method 1: Try setPlaybackQualityRange if supported by iframe API
+                            if (typeof yt.setPlaybackQualityRange === 'function') {
+                                yt.setPlaybackQualityRange(selectedQuality, selectedQuality);
                             }
-                            if (typeof tech.ytPlayer.setSuggestedVideoQuality === 'function') {
-                                tech.ytPlayer.setSuggestedVideoQuality(this.quality);
+
+                            // Method 2: Force YouTube stream quality reload preserving timestamp & playing state
+                            if (typeof yt.loadVideoById === 'function') {
+                                yt.loadVideoById({
+                                    videoId: CURRENT_VIDEO_ID,
+                                    startSeconds: currentTime,
+                                    suggestedQuality: selectedQuality
+                                });
+                                if (!isPlaying) {
+                                    setTimeout(() => playerInstance.pause(), 200);
+                                }
+                            } else if (typeof yt.setSuggestedVideoQuality === 'function') {
+                                yt.setSuggestedVideoQuality(selectedQuality);
                             }
                         }
 
                         if (qualityBadge) {
-                            qualityBadge.innerText = `Quality: ${this.qualityLabel}`;
+                            qualityBadge.innerText = `Quality: ${label}`;
                         }
 
-                        // Safely handle menu selection state using component methods
+                        // Safely update selection highlight state
                         if (this.menuButton_ && this.menuButton_.menu) {
                             const items = this.menuButton_.menu.children_;
                             if (items && Array.isArray(items)) {
