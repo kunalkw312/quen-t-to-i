@@ -216,7 +216,8 @@
                     customVars: {
                         playsinline: 1,   // Explicit YouTube iframe iOS parameter
                         enablejsapi: 1,   // Enable JS API controls
-                        origin: getOrigin()
+                        origin: getOrigin(),
+                        vq: 'hd1080'      // Force YouTube stream to request MAX quality (1080p) on load
                     }
                 }
             });
@@ -232,6 +233,8 @@
                         super(player, options);
                         this.quality = options.quality;
                         this.qualityLabel = options.label;
+                        this.targetWidth = options.width;
+                        this.targetHeight = options.height;
                     }
 
                     handleClick() {
@@ -242,18 +245,9 @@
 
                         if (tech && tech.ytPlayer) {
                             const yt = tech.ytPlayer;
-                            const currentTime = playerInstance.currentTime();
-                            const isPaused = playerInstance.paused();
+                            const iframe = tech.el(); // YouTube iframe target element
 
-                            // Execute direct quality forced stream switch via YouTube API
-                            if (typeof yt.loadVideoById === 'function') {
-                                yt.loadVideoById({
-                                    videoId: CURRENT_VIDEO_ID,
-                                    startSeconds: currentTime,
-                                    suggestedQuality: selectedQuality
-                                });
-                            }
-
+                            // 1. Force YouTube API direct call
                             if (typeof yt.setPlaybackQuality === 'function') {
                                 yt.setPlaybackQuality(selectedQuality);
                             }
@@ -262,11 +256,16 @@
                                 yt.setPlaybackQualityRange(selectedQuality, selectedQuality);
                             }
 
-                            // If video was playing, ensure playback resumes smoothly after stream reload
-                            if (!isPaused) {
-                                setTimeout(() => {
-                                    playerInstance.play();
-                                }, 300);
+                            // 2. Adjust iframe viewport dimensions to force YouTube DASH adaptive bitrate downscaling/upscaling
+                            if (iframe && this.targetWidth && this.targetHeight) {
+                                if (selectedQuality === 'default' || selectedQuality === 'hd1080') {
+                                    iframe.style.width = '100%';
+                                    iframe.style.height = '100%';
+                                } else {
+                                    // Scale down iframe render context to trigger lower quality stream selection
+                                    iframe.style.width = this.targetWidth + 'px';
+                                    iframe.style.height = this.targetHeight + 'px';
+                                }
                             }
                         }
 
@@ -298,19 +297,20 @@
 
                     createItems() {
                         const qualities = [
-                            { label: 'Auto (Adaptive)', value: 'default' },
-                            { label: '1080p HD', value: 'hd1080' },
-                            { label: '720p HD', value: 'hd720' },
-                            { label: '480p SD', value: 'large' },
-                            { label: '360p SD', value: 'medium' },
-                            { label: '240p Low', value: 'small' },
-                            { label: '144p Low', value: 'tiny' }
+                            { label: 'Max / 1080p HD', value: 'hd1080', width: 1920, height: 1080 },
+                            { label: '720p HD', value: 'hd720', width: 1280, height: 720 },
+                            { label: '480p SD', value: 'large', width: 854, height: 480 },
+                            { label: '360p SD', value: 'medium', width: 640, height: 360 },
+                            { label: '240p Low', value: 'small', width: 426, height: 240 },
+                            { label: '144p Low', value: 'tiny', width: 256, height: 144 }
                         ];
 
                         return qualities.map(q => {
                             const item = new QualityMenuItem(playerInstance, {
                                 label: q.label,
                                 quality: q.value,
+                                width: q.width,
+                                height: q.height,
                                 selectable: true
                             });
                             item.menuButton_ = this;
@@ -333,6 +333,14 @@
 
             // Initialize Quality Selector Plugin
             player.qualitySelector();
+
+            // Force Max Quality (1080p) on Initial Playback Ready State
+            player.on('ready', function () {
+                const tech = player.tech({ IWillNotUseThisInPlugins: true });
+                if (tech && tech.ytPlayer && typeof tech.ytPlayer.setPlaybackQuality === 'function') {
+                    tech.ytPlayer.setPlaybackQuality('hd1080');
+                }
+            });
 
             // iOS Touch Fallback Listener: Guarantees touch events trigger play on iOS Safari
             player.ready(function () {
